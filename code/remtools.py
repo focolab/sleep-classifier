@@ -36,6 +36,8 @@ import time
 import pandas as pd
 import numpy as np
 from scipy import signal
+import scipy.io.wavfile
+
 import matplotlib
 matplotlib.use("tkAgg")
 import matplotlib.pyplot as plt
@@ -909,6 +911,23 @@ class EDFData(object):
 
         print('  edf load complete: %s' % edf)
         print('-----------------------------------------------------------------------')
+
+    def dump_wavs(self, dest='./.'):
+        """convert to wav files"""
+
+        os.makedirs(dest, exist_ok=True)
+
+        for ch in ['EEG1', 'EEG2', 'EMG']:
+            signal_trace = self.signal_traces[ch]
+
+            filename = os.path.join(dest, 'trial-%s-%s.wav' % (str(self.trial), ch))
+            rate = int(signal_trace.f)
+            data = signal_trace.sig
+
+            print('wav export:', filename, '(%i Hz)' % (rate))
+
+            scipy.io.wavfile.write(filename, rate, data)
+
 
 
     def dfTrialEpoch(self):
