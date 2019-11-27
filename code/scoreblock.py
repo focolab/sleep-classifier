@@ -230,6 +230,17 @@ class ScoreBlock(object):
 
         TODO: make this take heirarchical args and 
 
+        keeprows conditions
+    
+        ('colname', value, comparison)  
+                ('classifier', 'OVO', 'eq')
+                ('classifier', ['OVO','OVR'], 'in')
+
+
+        ('colname', func)               ('classifier', lambda x: x in ['OVO', 'OVR'])
+    
+    
+    
 
 
         input
@@ -350,6 +361,8 @@ class ScoreBlock(object):
         if maskname is not None:
             df_index[maskcolname] = [maskname]*len(self.df_index)
             index_cols = self.index_cols+[maskcolname]
+        else:
+            index_cols = self.index_cols
 
         df_new = pd.concat([df_index, df_data], axis=1)
 
