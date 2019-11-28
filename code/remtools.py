@@ -809,6 +809,12 @@ class SignalTrace(object):
         self.epoch_duration = epoch_duration
         self.num_epochs = num_samples/samples_per_epoch
 
+    @property
+    def tvec(self):
+        """time vector"""
+        return np.arange(self.num_samples)/self.f
+
+
     def report(self):
         """"""
         print('---- SignalTrace.about() ----')
