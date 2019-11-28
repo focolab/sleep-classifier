@@ -27,7 +27,8 @@ class TraceDumper(object):
     
     This will fit 1 hour of data per page using 6 rows/page and 60 epochs/row
     
-    
+    TODO: possible to resurrect self.fig if it is clicked closed?
+
     """
     def __init__(self, std=None, scores=None):
         """
@@ -113,11 +114,9 @@ class TraceDumper(object):
         #print(df.head(20))
         
         self.df_panel_index = df
-        
-
 
         self.make_fig()
-        
+
 
     def make_fig(self):
         """create the figure"""
@@ -188,7 +187,12 @@ class TraceDumper(object):
         """
 
         from matplotlib.backends.backend_pdf import PdfPages
-        
+
+        print(self.fig)
+        # if self.fig is None:
+        #     print('NO FIGURE')
+        #     raise Exception()
+
         if f is None:
             trial = int(self.std.tagDict.get('trial', 0))
             day = (self.std.tagDict.get('day', 0))
@@ -213,6 +217,7 @@ class TraceDumper(object):
         """hot mess"""
         
 
+        conflict_cols = ['OVO-24h_8ch', 'hum-consensus']
 
         scoremap = {
             'Wake':0.9999,
@@ -236,8 +241,18 @@ class TraceDumper(object):
         
         # nuke it all and start from scratch (obviously slow, but hey)
         ppp = self.panels_per_page
+
+
+
+        # SET CURRENT FIGURE (in case it was closed), this is not working
         self.fig.clf()
+
+        #plt.figure(self.fig.number) # supposed to make self.fig the current fig
+
         ax = [plt.subplot(ppp, 1, i+1) for i in range(ppp)]
+
+
+
 
 
         # SIGNALS plotted w/ zorder -1 are rasterized on pdf/svg export
@@ -324,6 +339,30 @@ class TraceDumper(object):
             # 'tab10' also a cmap option
             ax[panel].imshow(scnum.data, origin='lower', cmap='plasma', aspect='auto', extent=extent, vmin=0, vmax=1)
             
+
+            #----------------------------------
+            # CONFLICTS (experimental, hacked in)
+            # humans fully agree, but disagree with the OVO model
+
+            cond_a = [('scoreTag', 'hum-consensus')]
+            cond_b = [('scoreTag', 'hum-consensus'), ('scoreTag', 'OVO-24h_8ch')]
+            hc = self.scores.mask(mask=slice(ea, eb)).keeprows(conditions=cond_a).data
+            hm = self.scores.mask(mask=slice(ea, eb)).keeprows(conditions=cond_b, comparison='any').consensus(out='data_only')
+
+            hc = hc.ravel()
+            hm = np.asarray(hm)
+
+            ndx = np.where((hc != 'XXX') & (hm == 'XXX'))[0]
+
+            # epoch time values
+            tvals = np.linspace(ea, eb-1, self.epochs_per_panel)*self.epoch_length
+            tvals += self.epoch_length/2
+
+            # X marks the spots
+            ax[panel].plot(tvals[ndx], ndx*0, marker='x', color='w', lw=0, ms=24, mew=10, zorder=3)
+            ax[panel].plot(tvals[ndx], ndx*0, marker='x', color='red', lw=0, ms=20, mew=5, zorder=3)
+
+
 
             #----------------------------------
             # FORMATTING FANCYNESS
