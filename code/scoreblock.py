@@ -312,14 +312,16 @@ class ScoreBlock(object):
         index, all matching indices are carried forward.
 
         out (str) : 'append' or 'Series'
-            append returns a new ScoreBlock with the consensus appended to df
-            Series just returns a pandas series (index and data)
+            append   : a new ScoreBlock with the consensus appended to df
+            Series   : a pandas series (index and data)
+            data_only: bare list of data consensus values
+
         index_fill (??): fill value for non-consensus indices
         data_fill (??): fill value for non-consensus data
 
         """
 
-        if out not in ['Series', 'append']:
+        if out not in ['Series', 'append', 'data_only']:
             raise Exception('out should be in [Series, append]')
 
 
@@ -329,9 +331,11 @@ class ScoreBlock(object):
         ccc = c_index+c_data
 
 
-        if out == 'Series':    
+        if out == 'Series':
             ser = pd.Series(dict(zip(self.df.columns, ccc)))
             cc = ser
+        if out == 'data_only':
+            cc = c_data
         elif out == 'append':
             dfc = self.df.copy()
             dfc.loc[len(dfc)] = ccc
