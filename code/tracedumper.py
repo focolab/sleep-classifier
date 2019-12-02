@@ -157,11 +157,13 @@ class TraceDumper(object):
 
         matplotlib.rcParams.update(pp)
         
+        #self.fig = plt.figure(num='fig', figsize=(24, 16), dpi=60)
         self.fig = plt.figure(figsize=(24, 16), dpi=60)
 
 
     def export(self, filename='trace-dump.png'):
         """"""
+
         self.fig.savefig(filename)
         
 
@@ -236,24 +238,26 @@ class TraceDumper(object):
         dy_pos = +7
         dy_neg = -2
 
-
         plot_signal_kwa = dict(lw=1, color='grey', alpha=0.7, zorder=-1)
         
-        # nuke it all and start from scratch (obviously slow, but hey)
-        ppp = self.panels_per_page
 
-
-
-        # SET CURRENT FIGURE (in case it was closed), this is not working
+        # FIGURE SETUP: nuke all the axes and start from scratch (slow, but hey)
         self.fig.clf()
 
-        #plt.figure(self.fig.number) # supposed to make self.fig the current fig
 
+        # if the figure was shown and closed, recreate it
+        # (hacky, still throwing an exception)
+        try:
+            self.fig.show()
+        except:
+            self.make_fig()
+            print('making new figure')
+            self.fig.show()
+
+
+        # recreate the axes
+        ppp = self.panels_per_page
         ax = [plt.subplot(ppp, 1, i+1) for i in range(ppp)]
-
-
-
-
 
         # SIGNALS plotted w/ zorder -1 are rasterized on pdf/svg export
         for axi in ax:
@@ -337,7 +341,8 @@ class TraceDumper(object):
             
             extent = (ta, tb, 0, ylim_min)
             # 'tab10' also a cmap option
-            ax[panel].imshow(scnum.data, origin='lower', cmap='plasma', aspect='auto', extent=extent, vmin=0, vmax=1)
+            im_kwa = dict(vmin=0, vmax=1, alpha=0.75, aspect='auto', origin='lower')
+            ax[panel].imshow(scnum.data, cmap='plasma', extent=extent, **im_kwa)
             
 
             #----------------------------------
@@ -391,5 +396,3 @@ class TraceDumper(object):
         tdp = (self.std.trial, self.std.tagDict['day'], page+1, self.num_pages)
         txt = 'trial: %i  day: %i  page: %i/%i' % tdp
         tx2 = self.fig.text(0.5, 0.99, txt, ha='center', va='top', fontsize=42)
-
-        self.fig.show()
