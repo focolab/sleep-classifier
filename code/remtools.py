@@ -775,6 +775,63 @@ class Spectrogram(object):
 
 
 
+from scipy.signal import butter, lfilter
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.signal import freqz
+
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    """
+    https://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
+    """
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+def butter_low(lowcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    b, a = butter(order, low, btype='lowpass')
+    return b, a
+
+def butter_high(highcut, fs, order=5):
+    nyq = 0.5 * fs
+    high = highcut / nyq
+    b, a = butter(order, high, btype='highpass')
+    return b, a
+
+def butter_filter(data, fs, lowcut=None, highcut=None, order=5):
+    """
+
+    low, high or bandpass filter depending on if lowcut and highcut are passed
+
+    adapted from:
+    https://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
+    """
+
+    if lowcut is None and highcut is None:
+        raise Exception('butter_filter requires lowcut, highcut, or both')
+
+    if lowcut is not None and highcut is not None:
+        b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    elif lowcut is None:
+        b, a = butter_high(highcut, fs, order=order)
+    elif highcut is None:
+        b, a = butter_high(highcut, fs, order=order)
+        
+    y = lfilter(b, a, data)
+    return y
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    """
+    https://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
+    """
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
 
 class SignalTrace(object):
     """signal trace and metadata
@@ -808,6 +865,16 @@ class SignalTrace(object):
         self.duration = duration
         self.epoch_duration = epoch_duration
         self.num_epochs = num_samples/samples_per_epoch
+
+
+    def bandpass(self, lowcut=None, highcut=None):
+        """bandpass filter the signal"""
+
+        order = 5
+        new_sig = butter_filter(self.sig, self.f, lowcut=lowcut, highcut=highcut, order=order)
+
+        return SignalTrace(sig=new_sig, f=self.f, samples_per_epoch=self.samples_per_epoch)
+
 
     @property
     def tvec(self):

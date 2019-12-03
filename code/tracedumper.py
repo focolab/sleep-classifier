@@ -247,13 +247,19 @@ class TraceDumper(object):
 
         # if the figure was shown and closed, recreate it
         # (hacky, still throwing an exception)
+        #
+        # also see:
+        # https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure.show
+        # https://stackoverflow.com/questions/31729948/matplotlib-how-to-show-a-figure-that-has-been-closed
+        # https://stackoverflow.com/questions/25419626/how-to-close-a-show-window-but-keep-the-figure-alive
+        #
+
         try:
             self.fig.show()
         except:
             self.make_fig()
             print('making new figure')
             self.fig.show()
-
 
         # recreate the axes
         ppp = self.panels_per_page
