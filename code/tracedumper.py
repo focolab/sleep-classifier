@@ -266,6 +266,7 @@ class TraceDumper(object):
         ax = [plt.subplot(ppp, 1, i+1) for i in range(ppp)]
 
         # SIGNALS plotted w/ zorder -1 are rasterized on pdf/svg export
+        # https://stackoverflow.com/a/48884968
         for axi in ax:
             axi.set_rasterization_zorder(0)
 

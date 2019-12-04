@@ -124,19 +124,20 @@ class ScoreBlock(object):
         print(self.df.head())
 
 
-    # def add_index_col(self, name='newcolumn', values=None):
-    #     """"""
+    def add_const_index_col(self, name='newcolumn', value=None):
+        """add an index column with a constant value"""
+        df_out = self.df.copy()
+        df_out[name] = [value]*len(df_out)
 
-    #     df_out = self.df.copy()
-    #     df_out[name] = values
-        
-    #     out = ScoreBlock(
-    #         df=df_out,
-    #         index_cols=self.index_cols+[name],
-    #         tagDict=self.tagDict
-    #         )
+        index_cols = self.index_cols+[name]
+        df_out = df_out[index_cols+self.data_cols]
 
-    #     return out
+        out = ScoreBlock(
+            df=df_out,
+            index_cols=index_cols,
+            tagDict=self.tagDict
+            )
+        return out
 
     def copy_index_cols(self):
         """"""
