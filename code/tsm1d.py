@@ -30,7 +30,6 @@ class TimeSeriesModel1D(object):
         t (array) : time values [s]
         x (array) : data values
 
-        tagDict : 
         metaData :
         """
         from sklearn import mixture
@@ -44,7 +43,6 @@ class TimeSeriesModel1D(object):
         self.t = t
         self.x = x
         self.gmm2 = gmm2
-        #self.tagDict = tagDict
         self.metaData = metaData
             
 
@@ -242,11 +240,6 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
         print('mfw_used (epochs):', mfwidth)
 
 
-    # tagDict = dict(
-    #     epochLength=epochLength,
-    #     medianFilterWidth=mfwidth*epochLength,
-    # )
-
     metaData = dict(        
         epochLength=epochLength,
         medianFilterWidth=mfwidth*epochLength,
@@ -257,7 +250,6 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
     tsmf = TimeSeriesModel1D(
         t=tval, 
         x=logpowmf, 
-        #tagDict=tagDict,
         metaData=metaData
         )
     
