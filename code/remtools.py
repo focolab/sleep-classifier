@@ -999,6 +999,19 @@ class EDFData(object):
         print('  edf load complete: %s' % edf)
         print('-----------------------------------------------------------------------')
 
+    @property
+    def freq(self):
+        """"""
+
+        ff = [self.signal_traces[name].f for name in ['EEG1', 'EEG2', 'EMG']]
+        f = list(set(ff))
+
+        if len(f) > 1:
+            raise Exception('channel frequencies do not match :( )')
+
+        return f[0]
+
+
     def dump_wavs(self, dest='./.'):
         """convert to wav files"""
 
