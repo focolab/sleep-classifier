@@ -222,6 +222,8 @@ class PCA(object):
     def __init__(self, mu=None, vals=None, vecs=None, df_index=None):
         """vanilla PCA
         
+        TODO: more general, affine transformation
+
         TODO: should have jsonFileName attribute, and a location?
             ** set location on export (and import) **
 
@@ -866,6 +868,7 @@ class SignalTrace(object):
         self.epoch_duration = epoch_duration
         self.num_epochs = num_samples/samples_per_epoch
 
+        self.metaData = {}
 
     def bandpass(self, lowcut=None, highcut=None):
         """bandpass filter the signal"""
@@ -873,7 +876,18 @@ class SignalTrace(object):
         order = 5
         new_sig = butter_filter(self.sig, self.f, lowcut=lowcut, highcut=highcut, order=order)
 
-        return SignalTrace(sig=new_sig, f=self.f, samples_per_epoch=self.samples_per_epoch)
+        new_st = SignalTrace(
+            sig=new_sig,
+            f=self.f,
+            samples_per_epoch=self.samples_per_epoch,
+            label=self.label
+        )
+
+        bp = dict(bandpass=dict(lowcut=lowcut, highcut=highcut))
+
+        new_st.metaData.update(bp)
+
+        return new_st
 
 
     @property
