@@ -243,7 +243,6 @@ class PCA(object):
 
         TODO: subclass the sklearn version?
         """
-        
 
         if mu is None:
             raise Exception('mu required')

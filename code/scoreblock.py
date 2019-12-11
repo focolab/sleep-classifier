@@ -28,9 +28,9 @@ class ScoreBlock(object):
         and so on
     - Not a pandas multi-index, but uses attributes index_cols and data_cols
     - The dump/load methods provide lossless storage (whereas loading a pandas
-        dataframe from csv requires user input to recreate the multi index).
-        Calling dump creates a json file (with metadata) and a csv (the
-        dataframe). The json file is used for load().
+        dataframe from csv requires user input to recreate the multi index,
+        or pickling). Calling dump creates a json file (with metadata) and a
+        csv (the dataframe). The json file is used for load().
 
     attributes
     ------

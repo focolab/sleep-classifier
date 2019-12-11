@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 from scipy import signal
 
+import scoreblock as sb
+
 
 class TimeSeriesModel1D(object):
     """1D time series model
@@ -24,7 +26,7 @@ class TimeSeriesModel1D(object):
 
     def __init__(self, t, x, metaData={}):
         """
-            
+
         input
         ------
         t (array) : time values [s]
@@ -68,9 +70,30 @@ class TimeSeriesModel1D(object):
 
         scores = self.gmm2.predict(self.x , pdiff=pdiff)
         
-        return scores
+        #return scores
     
-#         data_cols = ['epoch-%6.6i' % (i+1) for i in range(len(logpow))]
+        data_cols = ['epoch-%6.6i' % (i+1) for i in range(len(scores))]
+
+
+        index = dict(
+            pdiff=pdiff,
+            scoreType='GMM_1D',
+            )
+
+        index_cols = [k for k in index.keys()]
+        index_vals = [v for v in index.values()]
+
+
+        data = index_vals+[s for s in scores]
+
+        # dataframe via series
+        df = pd.Series(index=index_cols+data_cols, data=data).to_frame().T
+
+        return sb.ScoreBlock(df=df, index_cols=index_cols)
+
+        # pdb.set_trace()
+
+
 #         df_data = pd.DataFrame(data=[scores], columns=data_cols)
 
 #         index_cols = ['classifier', 'medianFilterWidth']
@@ -122,6 +145,12 @@ class TwoStateGMMClassifier(object):
     2) Points close to the (inner) decision boundary are assigned the switch state
        if |p0-p1| < pdiff
 
+    
+    TODO: sklearn.mixture.GMM could be (de-)serialized by tracking:
+            n_components
+            precisions_init
+            weights_init
+            means_init
     """
     def __init__(self, clf=None):
         """
@@ -254,3 +283,91 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
         )
     
     return tsmf
+
+
+
+
+def test_full():
+    """
+
+    - synthetic signal
+    - built tsm1d
+    - score preditions
+
+    """
+    import remtools as rt
+    import matplotlib.pyplot as plt
+
+    os.makedirs('scratch', exist_ok=True)
+
+    np.random.seed(seed=123)
+
+
+    # generate time series (sin wave)
+    t = np.arange(81)
+    x = 1*np.sin(0.05*t/2*np.pi)
+
+    # x = 2/(1+np.exp(0.2*(200-t)))-1
+    # x += np.random.randn(len(t))*0.2
+
+
+    metaData = {}
+
+    # build the model
+    m = TimeSeriesModel1D(t=t, x=x, metaData=metaData)
+
+    # predict scores
+    pdiff=0.99
+    scoreblock = m.predict(pdiff=pdiff)
+    scores = scoreblock.data.ravel()
+
+
+    # predicted switches
+    assert scores[4] == -1
+    assert scores[5] == 1
+    assert scores[47] == -1
+    assert scores[48] == 0
+
+
+    # GMM limits and peaks
+    pb_lim = m.gmm2.xinterval(pdiff=pdiff)
+    gmm_peaks = m.gmm2.means
+
+    bin_edges = np.linspace(-1.4, 1.4, 21)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1])/2
+    hx = m.hx(bins=bin_edges)
+
+
+    # print(x)
+    # print(np.mean(x))
+    # print(gmm_peaks)
+    # print(m.gmm2.covs)
+    # print(m.gmm2.weights)
+
+
+    # plot for sanity checking
+    figx = plt.figure(figsize=(12, 4))
+    ax = [plt.subplot(1, 4, (1, 3))]
+    ax.append(plt.subplot(1, 4, 4, sharey=ax[0]))
+
+    ax[0].plot(t, x, '-o', mfc='grey', label='data')
+    ax[0].plot(t, scores-2, '-o', mfc='grey', label='scores')
+    ax[0].axhspan(pb_lim[0], pb_lim[1], color='grey', alpha=0.2)
+    ax[0].axhline(gmm_peaks[0], color='red', alpha=0.4)
+    ax[0].axhline(gmm_peaks[1], color='red', alpha=0.4)
+
+    ax[1].plot(hx, bin_centers, '-o', mfc='grey', label='data')
+    ax[1].axhspan(pb_lim[0], pb_lim[1], color='grey', alpha=0.2)
+    ax[1].axhline(gmm_peaks[0], color='red', alpha=0.4)
+    ax[1].axhline(gmm_peaks[1], color='red', alpha=0.4)
+
+    ax[0].legend()
+
+    plt.savefig('scratch/plot-ts-model-1D-demo.png')
+
+
+if __name__ == '__main__':
+
+
+    test_full()
+
