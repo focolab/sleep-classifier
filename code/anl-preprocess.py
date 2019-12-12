@@ -4,13 +4,11 @@
 #   load data (EDF files and scores)
 #   build features (spectrograms, filtering, smoothing, striding)
 #   
-#   dimension reduction
-#   plotting
-#
+#   TODO: generalize the featurization process
 #
 #======================================
 import os
-import argparse
+import argparse 
 import json
 import pdb
 
@@ -27,6 +25,38 @@ import scoreblock as sb
 
 #sns.set(color_codes=True)
 #sns.set_style('ticks')
+
+
+def compute_spectrogram_features(edfd=None, params={}):
+    """compute spectrogram based features
+    
+    input
+    ------
+    edf (file/reader?)
+    params
+
+    output
+    ------
+    scoreblock?
+
+    """
+
+    # defaults
+    pEEG = dict(lowpass=20,  highpass=2,  logscale=False, normalize=True, medianfilter=9, stride=5)
+    pEMG = dict(lowpass=100, highpass=30, logscale=False, normalize=True, medianfilter=9, stride=10)
+
+    pEEG.update(params.get('EEG', {}))
+    pEMG.update(params.get('EMG', {}))
+
+    # this is convolutedddd
+    sxxb = rt.SxxBundle.from_EDFData(edf).prep(pEEG=pEEG, pEMG=pEMG)
+    scb = sxxb.to_scoreblock()
+
+    return scb
+
+def compute_power_features():
+    """rms power features"""
+    pass
 
 
 #=========================================================================================
@@ -89,17 +119,23 @@ for index, row in load.iterrows():
     tagDict['day'] = row.get('day', 1)
 
 
+
+    params = dict(EEG=pEEG, EMG=pEMG)
+    features_scb = compute_spectrogram_features(edfd=edf, params=params)
+
     #== preprocess spectrograms, stage data for modeling
     std = rt.StagedTrialData(
         loc=fldr, 
         edf=edf, 
         sw=sw,
+        features=features_scb,
         scoreblock=scoreblock,
         trial=trial,
-        stagingParameters=stgparam, 
+        stagingParameters=stgparam,
         tagDict=tagDict
         )
-    std.sxxb_raw = rt.SxxBundle.from_EDFData(std.edf)
+
+    #std.sxxb_raw = rt.SxxBundle.from_EDFData(std.edf)
     std.sxxb_prep = rt.SxxBundle.from_EDFData(std.edf).prep(pEEG=pEEG, pEMG=pEMG)
     allTrialData.append(std)
     std.to_json()

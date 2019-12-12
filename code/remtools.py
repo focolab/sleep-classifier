@@ -93,6 +93,7 @@ class StagedTrialData(object):
                  sxxb_raw=None,
                  sxxb_prep=None,
                  sw=None,
+                 features=None,
                  scoreblock=None,
                  stagingParameters=None,
                  trial='trialname',
@@ -116,6 +117,7 @@ class StagedTrialData(object):
 
         self.trial = trial
         self.edf = edf
+        self.features = features
         self.scoreblock = scoreblock
         self.sw = sw
         self.stagingParameters = stagingParameters
@@ -133,20 +135,26 @@ class StagedTrialData(object):
         for k,v in self.tagDict.items():
             print('%15s : %s' % (k, str(v)))
 
-    @property
-    def features(self):
-        return self.sxxb_prep.to_dataframe()
+    # @property
+    # def features(self):
+    #     """dataframe with multi-index"""
+    #     return self.sxxb_prep.to_dataframe()
 
     def to_json(self, out='staged-trial-data.json'):
         """"""
         opj = lambda x: os.path.join(self.loc, x)        
         
  
-        #== these file names are hard coded
-        self.sxxb_prep.to_csv(opj('data-features.csv'))
+        # #== these file names are hard coded        
+        # self.sxxb_prep.to_csv(opj('data-features.csv'))
 
         if self.sw is not None:
             self.sw.to_csv(opj('data-scores.csv'))
+
+        # raise Exception('TODO: features scoreblock to/from json')
+
+        if self.features is not None:
+            self.features.to_json(opj('data-features-scoreblock.json'))
 
         if self.scoreblock is not None:
             self.scoreblock.to_json(opj('data-scoreblock.json'))
@@ -176,12 +184,15 @@ class StagedTrialData(object):
         loc = os.path.dirname(jfl)
         opj = lambda x: os.path.join(loc, x)
         
-        #== these file names are hard coded
-        sxxb = SxxBundle.from_csv(opj('data-features.csv'))
-        try:
-            sw = ScoreWizard.from_csv(opj('data-scores.csv'))
-        except:
-            sw = None
+        # #== these file names are hard coded
+        # try:
+        #     sxxb = SxxBundle.from_csv(opj('data-features.csv'))
+        # except:
+        #     sxxb = None
+        # try:
+        #     sw = ScoreWizard.from_csv(opj('data-scores.csv'))
+        # except:
+        #     sw = None
 
         try:
             scoreblock = sb.ScoreBlock.from_json(opj('data-scoreblock.json'))
@@ -191,7 +202,12 @@ class StagedTrialData(object):
         stagingParameters = StagingParameters.from_json(opj('param-staging.json'))
         
 
-        
+        try:
+            features = sb.ScoreBlock.from_json(opj('data-features-scoreblock.json'))
+        except:
+            features = None
+
+
         with open(jfl) as jfopen:
             jdic = json.load(jfopen)
 
@@ -209,9 +225,10 @@ class StagedTrialData(object):
         args = dict(trial=trial, 
                     edf=edf,
                     loc=loc,
-                    sw=sw, 
+                    #sw=sw,
                     scoreblock=scoreblock,
-                    sxxb_prep=sxxb,
+                    features=features,
+                    #sxxb_prep=sxxb,
                     tagDict=tagDict,
                     stagingParameters=stagingParameters)
         return cls(**args)
@@ -557,6 +574,19 @@ class SxxBundle(object):
         """run PCA on the stacked data"""
         stack = np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
         return PCA(stack)
+
+    def to_scoreblock(self):
+        """not scores, but scoreblock is a useful container"""
+        import scoreblock as sb
+        dd = dict(
+            EEG1=self.EEG1.to_df,
+            EEG2=self.EEG2.to_df,
+            EMG=self.EMG.to_df
+            )
+        df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
+        index_cols = ['channel','f[Hz]']
+        return sb.ScoreBlock(df=df, index_cols=index_cols)
+
 
     def to_dataframe(self):
         """one dataframe with a multiindex to track channels"""
@@ -1029,14 +1059,14 @@ class EDFData(object):
 
 
 
-    def dfTrialEpoch(self):
-        """return a dataframe with trial and epochs for appending to others"""
-        epochs = range(1, self.num_epochs+1)
-        trial = [self.trial]*self.num_epochs
-        cols = ['Epoch#', 'trial']
+    # def dfTrialEpoch(self):
+    #     """return a dataframe with trial and epochs for appending to others"""
+    #     epochs = range(1, self.num_epochs+1)
+    #     trial = [self.trial]*self.num_epochs
+    #     cols = ['Epoch#', 'trial']
         
-        df = pd.DataFrame(data=zip(epochs,trial), columns=cols)
-        return df
+    #     df = pd.DataFrame(data=zip(epochs,trial), columns=cols)
+    #     return df
     
 
 class ScoreWizard(object):
