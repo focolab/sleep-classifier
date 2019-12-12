@@ -14,17 +14,9 @@ import pdb
 
 import pandas as pd
 import numpy as np
-#import matplotlib
-#matplotlib.use("Agg")
-#import matplotlib.pyplot as plt
-#import seaborn as sns
 
-#import plottools as pt
 import remtools as rt
 import scoreblock as sb
-
-#sns.set(color_codes=True)
-#sns.set_style('ticks')
 
 
 def compute_spectrogram_features(edfd=None, params={}):
@@ -43,7 +35,7 @@ def compute_spectrogram_features(edfd=None, params={}):
 
     # defaults
     pEEG = dict(lowpass=20,  highpass=2,  logscale=False, normalize=True, medianfilter=9, stride=5)
-    pEMG = dict(lowpass=100, highpass=30, logscale=False, normalize=True, medianfilter=9, stride=10)
+    pEMG = dict(lowpass=100, highpass=130, logscale=False, normalize=True, medianfilter=9, stride=10)
 
     pEEG.update(params.get('EEG', {}))
     pEMG.update(params.get('EMG', {}))
@@ -101,12 +93,11 @@ for index, row in load.iterrows():
     #== load edf and scores
     edf = rt.EDFData(edf=edfFile)
 
-    sw = None
+    #sw = None
     if not isinstance(scoreFile, str):
         scoreblock = None
     else:
         if os.path.exists(scoreFile):
-            #sw = rt.ScoreWizard(data=pd.read_csv(scoreFile))
             scoreblock = sb.ScoreBlock.from_json(scoreFile)
 
         else:
@@ -119,15 +110,13 @@ for index, row in load.iterrows():
     tagDict['day'] = row.get('day', 1)
 
 
-
     params = dict(EEG=pEEG, EMG=pEMG)
     features_scb = compute_spectrogram_features(edfd=edf, params=params)
 
     #== preprocess spectrograms, stage data for modeling
     std = rt.StagedTrialData(
         loc=fldr, 
-        edf=edf, 
-        sw=sw,
+        edf=edf,
         features=features_scb,
         scoreblock=scoreblock,
         trial=trial,
@@ -135,8 +124,6 @@ for index, row in load.iterrows():
         tagDict=tagDict
         )
 
-    #std.sxxb_raw = rt.SxxBundle.from_EDFData(std.edf)
-    std.sxxb_prep = rt.SxxBundle.from_EDFData(std.edf).prep(pEEG=pEEG, pEMG=pEMG)
     allTrialData.append(std)
     std.to_json()
 

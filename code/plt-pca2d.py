@@ -86,7 +86,8 @@ if __name__ == '__main__':
     if pca_hist_kwa.get('levels', None) in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
         for std in allTrialData:
-            X = std.sxxb_prep.to_dataframe().values
+            #X = std.sxxb_prep.to_dataframe().values
+            X = std.features.data
             lims = pt.plot_PCA_2D_hist(X=X, pca=pca, justlimits=True, **pca_hist_kwa)
             cmin = min(cmin, lims[0])
             cmax = max(cmax, lims[1])

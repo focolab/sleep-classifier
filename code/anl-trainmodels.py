@@ -419,14 +419,13 @@ if __name__ == '__main__':
 
     # load training data
     allTrialData = [rt.StagedTrialData.from_json(f, loadEDF=False) for f in args.f]
-    Xcat = np.vstack([std.sxxb_prep.stack.T for std in allTrialData])
 
-    print('USE SCOREBLOCK FOR CONSENSUS SCORES')
-#    ycat = pd.concat([std.sw.dfConsensus for std in allTrialData]).reset_index(drop=True)
-    # ycat needs to be a concatenated vector of consensus scores
+    # features
+    Xcat = np.vstack([std.features.data.T for std in allTrialData])
+
+    # scores: ycat needs to be a concatenated vector of consensus scores
     ycat = []
     for std in allTrialData:
-        #std.scoreblock.about()
         yy = std.scoreblock.keeprows(conditions = [('scorer', 'consensus')])
         ycat.append(yy.data.ravel())
     ycat = np.asarray(ycat).ravel()
@@ -449,7 +448,6 @@ if __name__ == '__main__':
         dfs.append(df)
     df_index = pd.concat(dfs).reset_index(drop=True)
 
-    pdb.set_trace()
 
     # train models using different subsamples of training data
     prediction_dataframes = []

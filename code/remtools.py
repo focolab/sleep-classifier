@@ -90,9 +90,6 @@ class StagedTrialData(object):
     def __init__(self, 
                  loc=None,
                  edf=None,
-                 sxxb_raw=None,
-                 sxxb_prep=None,
-                 sw=None,
                  features=None,
                  scoreblock=None,
                  stagingParameters=None,
@@ -119,14 +116,10 @@ class StagedTrialData(object):
         self.edf = edf
         self.features = features
         self.scoreblock = scoreblock
-        self.sw = sw
         self.stagingParameters = stagingParameters
 
         self.tagDict = tagDict
 
-        #== spectrogram bundles at different stages of processing
-        self.sxxb_raw = sxxb_raw
-        self.sxxb_prep = sxxb_prep
 
     def about(self):
         """"""
@@ -135,23 +128,10 @@ class StagedTrialData(object):
         for k,v in self.tagDict.items():
             print('%15s : %s' % (k, str(v)))
 
-    # @property
-    # def features(self):
-    #     """dataframe with multi-index"""
-    #     return self.sxxb_prep.to_dataframe()
 
     def to_json(self, out='staged-trial-data.json'):
         """"""
         opj = lambda x: os.path.join(self.loc, x)        
-        
- 
-        # #== these file names are hard coded        
-        # self.sxxb_prep.to_csv(opj('data-features.csv'))
-
-        if self.sw is not None:
-            self.sw.to_csv(opj('data-scores.csv'))
-
-        # raise Exception('TODO: features scoreblock to/from json')
 
         if self.features is not None:
             self.features.to_json(opj('data-features-scoreblock.json'))
@@ -184,23 +164,13 @@ class StagedTrialData(object):
         loc = os.path.dirname(jfl)
         opj = lambda x: os.path.join(loc, x)
         
-        # #== these file names are hard coded
-        # try:
-        #     sxxb = SxxBundle.from_csv(opj('data-features.csv'))
-        # except:
-        #     sxxb = None
-        # try:
-        #     sw = ScoreWizard.from_csv(opj('data-scores.csv'))
-        # except:
-        #     sw = None
+        # these file names are hard coded
+        stagingParameters = StagingParameters.from_json(opj('param-staging.json'))
 
         try:
             scoreblock = sb.ScoreBlock.from_json(opj('data-scoreblock.json'))
         except:
             scoreblock = None
-
-        stagingParameters = StagingParameters.from_json(opj('param-staging.json'))
-        
 
         try:
             features = sb.ScoreBlock.from_json(opj('data-features-scoreblock.json'))
@@ -225,10 +195,8 @@ class StagedTrialData(object):
         args = dict(trial=trial, 
                     edf=edf,
                     loc=loc,
-                    #sw=sw,
                     scoreblock=scoreblock,
                     features=features,
-                    #sxxb_prep=sxxb,
                     tagDict=tagDict,
                     stagingParameters=stagingParameters)
         return cls(**args)
