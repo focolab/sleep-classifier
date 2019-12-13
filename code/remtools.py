@@ -9,8 +9,6 @@
         EDFData: imported EDF data, extracted signals and raw spectrograms
         SignalTrace: Signal trace and some metadata
         Spectrogram: Spectrogram with analysis methods
-        SxxBundle: a bundle of 3 Spectrograms (TODO: combine w/spectrogram?)
-        ScoreWizard: individual and consensus score data
         PCA: principal component analysis, no frills
 
     Functions
@@ -505,108 +503,6 @@ class PCHisto(object):
 
 
 
-# class SxxBundle(object):
-#     """Bundle of spectrograms (typically for one trial)
-#     """
-#     def __init__(self, EEG1=None, EEG2=None, EMG=None):
-#         self.EEG1 = EEG1
-#         self.EEG2 = EEG2
-#         self.EMG = EMG
-#         self.spectrograms = dict(EEG1=self.EEG1, EEG2=self.EEG2, EMG=self.EMG)
-
-#     @classmethod
-#     def from_EDFData(cls, edfd):
-#         """build using raw spectrograms from EDFData"""
-#         EEG1 = edfd.spectrograms['EEG1']
-#         EEG2 = edfd.spectrograms['EEG2']
-#         EMG = edfd.spectrograms['EMG']
-#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
-
-#     @property
-#     def stack(self):
-#         """stack Sxx data on frequency axis """
-#         return np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
-
-#     @classmethod
-#     def fuse(cls, bundles):
-#         """fuse together SxxBundles (join trials on the time axis)"""
-#         sxxA = [bundle.EEG1 for bundle in bundles]
-#         sxxB = [bundle.EEG2 for bundle in bundles]
-#         sxxC = [bundle.EMG for bundle in bundles]
-#         EEG1 = sxxA[0].concatenate(others=sxxA[1:])
-#         EEG2 = sxxB[0].concatenate(others=sxxB[1:])
-#         EMG  = sxxC[0].concatenate(others=sxxC[1:])
-#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
-
-#     def pca(self):
-#         """run PCA on the stacked data"""
-#         stack = np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
-#         return PCA(stack)
-
-#     def to_scoreblock(self):
-#         """not scores, but scoreblock is a useful container"""
-#         import scoreblock as sb
-#         dd = dict(
-#             EEG1=self.EEG1.to_df,
-#             EEG2=self.EEG2.to_df,
-#             EMG=self.EMG.to_df
-#             )
-#         df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
-#         index_cols = ['channel','f[Hz]']
-#         return sb.ScoreBlock(df=df, index_cols=index_cols)
-
-#     def to_dataframe(self):
-#         """one dataframe with a multiindex to track channels"""
-#         dd = dict(EEG1=self.EEG1.to_df,
-#                   EEG2=self.EEG2.to_df,
-#                   EMG=self.EMG.to_df
-#                   )
-#         df = pd.concat(dd)
-#         df.index.set_names(['channel','f[Hz]'], inplace=True)
-#         return df
-
-#     def to_csv(self, csv='sxx_bundle.csv'):
-#         """make a multi-index dataframe and write it to csv"""
-#         self.to_dataframe().to_csv(csv, float_format='%g')
-#         return
-
-#     @classmethod
-#     def from_csv(cls, csv=None):
-#         """"""
-#         df = pd.read_csv(csv, index_col=[0,1])
-
-#         dfEEG1 = df.loc['EEG1']
-#         dfEEG2 = df.loc['EEG2']
-#         dfEMG = df.loc['EMG']
-#         EEG1 = Spectrogram.from_df(df=dfEEG1, label='EEG1')
-#         EEG2 = Spectrogram.from_df(df=dfEEG2, label='EEG2')
-#         EMG = Spectrogram.from_df(df=dfEMG, label='EMG')
-
-#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
-
-    
-#     def prep(self, pEEG=None, pEMG=None):
-#         """preprocessing"""
-#         #== merge default parameters with input
-#         pEEGd = dict(lowpass=None, highpass=None, logscale=False, 
-#                      normalize=False, medianfilter=None, stride=None)
-#         pEMGd = dict(lowpass=None, highpass=None, logscale=False, 
-#                      normalize=False, medianfilter=None, stride=None)
-#         pEEGd.update(pEEG)
-#         pEMGd.update(pEMG)
-#         self.params = dict(EEG=pEEGd, EMG=pEMGd)
-
-#         EEG1 = self.EEG1.prep(pEEGd)
-#         EEG2 = self.EEG2.prep(pEEGd)
-#         EMG = self.EMG.prep(pEMG)
-
-#         return SxxBundle(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
-
-
-
-
-
-
 
 class Spectrogram(object):
     """Spectrogram with some signal processing methods
@@ -1035,80 +931,6 @@ class EDFData(object):
     #     df = pd.DataFrame(data=zip(epochs,trial), columns=cols)
     #     return df
     
-
-class ScoreWizard(object):
-    """for storing, slicing and dicing human score data (for ONE trial)
-    
-    """
-    
-    def __init__(self, data=None):
-        """"""
-
-        print('WARNING: ScoreWizard deprecated in favor of scoreblocks')
-        self.data = data
-        self.scorers = data['scorer'].unique()
-        self.trial = data['trial'].unique()[0]
-        self.data_by_scorer = {ss:data[data['scorer']==ss] for ss in self.scorers}
-
-        if len(data['trial'].unique()) > 1:
-            print('>1 trial in score data',  data['trial'].unique())
-            raise Exception()
-        
-        #== helper dictionaries
-        self.scoreNum2Str = dict(set(zip(data['Score#'], data['Score'])))        
-        self.scoreNum2Str[0] = 'XXX'
-        self.scoreStr2Num = {v:k for k,v in self.scoreNum2Str.items()}
-
-        #== consensus dataframe
-        consensus = lambda x: x[0] if len(np.unique(x)) == 1 else 0
-        pp = data.pivot_table(index=['Epoch#', 'trial'], columns='scorer', values='Score#')    
-        pp['cScoreNum'] = pp.apply(consensus, axis=1)
-        pp['cScoreStr'] = pp['cScoreNum'].map(self.scoreNum2Str)
-        self.dfScore = pp
-        
-        #== just the consensus scores
-        cols = ['Epoch#', 'trial', 'cScoreNum', 'cScoreStr']
-        df_flat = pp.reset_index()[cols]
-        df_flat.columns.name = None
-        self.dfConsensus = df_flat
-        
-        self.dfConsensus['trial'] = [str(x) for x in self.dfConsensus['trial']]
-
-    @property
-    def scoreblock(self):
-        import scoreblock as sb
-
-        scores = []
-        ndx = []
-        for ss in self.scorers:
-            dd = self.data_by_scorer[ss]
-            scores.append(dd['Score'].values)
-            ndx.append([self.trial, ss])
-            #pdb.set_trace()
-
-        scores.append(self.dfConsensus['cScoreStr'])
-        ndx.append([self.trial, 'consensus'])
-
-        index_cols = ['Score', 'scorer']
-        data_cols = ['epoch-%6.6i' % (i+1) for i in range(len(scores[0]))]
-        dfa = pd.DataFrame(data=ndx, columns=index_cols)
-        dfb = pd.DataFrame(data=scores, columns=data_cols)
-
-        df = pd.concat([dfa, dfb], axis=1)
-
-        return sb.ScoreBlock(df=df, index_cols=index_cols)
-
-
-    @classmethod
-    def from_csv(cls, csv):
-        """build from a data-scores-*csv file"""       
-        return cls(data=pd.read_csv(csv))
-
-    def to_csv(self, csv):
-        """"""
-        self.data.to_csv(csv)
-        return
-
 
 def eigsorted(cov):
     """returned eigenvectors are in COLUMNS"""

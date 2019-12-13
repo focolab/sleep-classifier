@@ -22,9 +22,12 @@ import scoreblock as sb
 def compute_spectrogram_features(edfd=None, params={}):
     """compute spectrogram based features
     
+    WWRW: spectrogram specific things are contained here, features used
+        elsewhere are not assumed to derive from spectrograms
+
     input
     ------
-    edf (file/reader?)
+    edfd (EDFData)
     params
 
     output
@@ -50,7 +53,6 @@ def compute_spectrogram_features(edfd=None, params={}):
     df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
     index_cols = ['channel','f[Hz]']
     scb = sb.ScoreBlock(df=df, index_cols=index_cols)
-
 
     return scb
 
