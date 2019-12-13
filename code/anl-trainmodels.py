@@ -143,8 +143,14 @@ def training_loo(X=None, y=None, df_index=None, params_train={}):
     trial: (int/str) trial names, used for leave-one-out xvalidation
     isTraining: (bool) used to train on a subset of training data
 
-    TODO: training masks (isValid, isTraining) for X
-    TODO: loo_col (for leave-one-out grouping)
+
+    TODO: fixed spec for masks, set masks OUTSIDE OF HERE
+            isTraining: use for training
+            isValidation: use for validation
+            looIndex: leave one out index (usually trial)
+
+    TODO: stop the nesting!
+            return a stand-alone model for each case of hyper-params
 
     """
 
@@ -195,7 +201,9 @@ def training_loo(X=None, y=None, df_index=None, params_train={}):
         
         # predict ALL
         ndx_prd = df_index[df_index['trial'] == trial].index.values
+
         df_prd , data_cols = mdic['cb'].predict(X=X[ndx_prd])
+
         df_prd['trial'] = [trial]*df_prd.shape[0]
         index_cols = ['trial', 'classifier_name']
         df_prd = df_prd[index_cols+data_cols]
@@ -474,7 +482,6 @@ if __name__ == '__main__':
         # leave one out (LOO) cross validation
         xv_models, full_model = training_loo(
             X=Xcat,
-            #y=ycat[scoreKey].values,
             y=ycat,
             df_index=df_index, 
             params_train=params_train
