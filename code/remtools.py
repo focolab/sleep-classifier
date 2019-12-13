@@ -48,40 +48,6 @@ import pyedflib
 import scoreblock as sb
 
 
-class StagingParameters(object):
-    """"""
-    def __init__(self, spectrogram=None, standardization=None):
-        print('STAGING PARAMETERS SHOULD BE DEPRECATED')
-        self.spectrogram = spectrogram
-        #self.standardization = standardization
-    
-    def to_dict(self):
-        abt = 'parmeters for processing EEG and EMG signal data'
-        
-        dd = dict(_about=abt,
-                  spectrogram=self.spectrogram,
-                  #standardization=self.standardization.to_dict()
-                  )
-        return dd
-
-    def to_json(self, out='param-staging.json'):
-        dd = self.to_dict()
-        with open(out,'w') as jout:
-            json.dump(dd, jout, indent=2, sort_keys=False)
-            jout.write('\n')
-
-    @classmethod
-    def from_json(cls, jsonfile):
-        """alternative constructor reading a json file"""
-
-        with open(jsonfile) as jfopen:
-            jdic = json.load(jfopen)
-
-        spec = jdic.get('spectrogram', None)
-        stnd = jdic.get('standardization', None)
-        return cls(spectrogram=spec, standardization=stnd)
-    
-
 
 class StagedTrialData(object):
     """EDF data, Features and Scores for one trial"""
@@ -137,7 +103,6 @@ class StagedTrialData(object):
         if self.scoreblock is not None:
             self.scoreblock.to_json(opj('data-scoreblock.json'))
 
-        self.stagingParameters.to_json(opj('param-staging.json'))
 
         #print(os.path.relpath(self.edf.filename, self.loc))
         edfFile = os.path.relpath(self.edf.filename, self.loc)
@@ -148,6 +113,7 @@ class StagedTrialData(object):
                     trial=self.trial,
                     tagDict=self.tagDict,
                     edfMetaData=self.edf.metadata,
+                    stagingParameters=self.stagingParameters,
                     files=fdic)
         
         jfl = opj(out)
@@ -163,8 +129,6 @@ class StagedTrialData(object):
         opj = lambda x: os.path.join(loc, x)
         
         # these file names are hard coded
-        stagingParameters = StagingParameters.from_json(opj('param-staging.json'))
-
         try:
             scoreblock = sb.ScoreBlock.from_json(opj('data-scoreblock.json'))
         except:
@@ -182,7 +146,8 @@ class StagedTrialData(object):
         trial = jdic.get('trial', 'trialname')
         files = jdic.get('files', {})
         tagDict = jdic.get('tagDict', {})
-        
+        stagingParameters = jdic.get('stagingParameters', {})
+
         edfFile = files.get('edf')
         
         if loadEDF:

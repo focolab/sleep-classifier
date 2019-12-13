@@ -64,7 +64,7 @@ if __name__ == '__main__':
     # project features and make histograms
     histos = []
     for std in allTrialData:
-        X = std.sxxb_prep.stack        
+        X = std.features.data
         td = std.tagDict
         hh = pca.project_histo(data=X, tagDict=td, **prj_kwa)
         histos.append(hh)
