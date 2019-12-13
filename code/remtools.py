@@ -4,24 +4,18 @@
     tools for mouse EEG/EMG analysis and sleep state classification
 
     Classes
-        StagingParameters: parameters for data staging, with json in/output
         StagedTrialData: features and scores, with json io for subsequent analysis
         EDFData: imported EDF data, extracted signals and raw spectrograms
         SignalTrace: Signal trace and some metadata
         Spectrogram: Spectrogram with analysis methods
-        PCA: principal component analysis, no frills
+        PCA: principal component analysis, a few frills
 
     Functions
         eigsorted: diagonaize a (cov) matrix
         plot_spectrogram_cleanup: plot the featurization of spectrograms
 
-    DEPRECATED        
-        plot_trial_chunks: plots trial information in epoch chunks
-
-sleep-scorer
     TODO:
-    EDFData should provide a parameter dictionary
-    EDFData lazy/delayed load
+    EDFData should be EDFReader (lazy/delayed load)
 
 """
 import pdb
@@ -43,10 +37,8 @@ from matplotlib.patches import Ellipse
 import seaborn as sns
 
 import pyedflib
-#import plottools as pt
 
 import scoreblock as sb
-
 
 
 class StagedTrialData(object):
@@ -60,14 +52,7 @@ class StagedTrialData(object):
                  trial='trialname',
                  tagDict={}):
         """
-
-        three stages of spectrogram processing
-            sxxb_raw    raw spectrograms, DFT of experimental signals
-            sxxb_prep   preprocessed (median/bandpass/normalized), but not standardized
-            
-        TODO: edf load option (edfData/edfFile)
-        TODO: import/export
-        TODO: include pre-processing parameters here
+        TODO: edf should be a lazy reader (EDFReader)
         """
 
         if loc is None:
@@ -437,7 +422,6 @@ class PCA(object):
 class PCHisto(object):
     """histogram of PC projected data
 
-
     attributes
     ------
     bin_edges (list of lists): one list of bin edges per dimension
@@ -445,8 +429,6 @@ class PCHisto(object):
     dims (list) : names of the dimensions
     tagDict (dict) : metadata tags (trial/genotype etc)
     pca (remtools.PCA) : PCA used for projection
-
-
 
     """
     def __init__(self, dims=None, bin_edges=None, hist=None, tagDict={}, pca=None):
@@ -462,10 +444,6 @@ class PCHisto(object):
         print('------ PCHisto.about() ---------')
         print(self.tagDict)
         print(self.dims)
-
-
-
-
 
 
 
@@ -503,7 +481,7 @@ class Spectrogram(object):
 
     @property
     def to_df(self):
-        """to dataframe"""
+        """to dataframe TODO: should not be property"""
         cols = ['time[s]-%g' % f for f in self.t]
         df = pd.DataFrame(data=self.Sxx, columns=cols)
         df.index = self.f
@@ -606,38 +584,12 @@ class Spectrogram(object):
         return Spectrogram(Sxx=Sxx, f=f, t=self.t, label=self.label)
     
 
-    def plot(self):
-        """could implement plotting here"""
-        #sp = spectrograms[label]
-        #rr = np.log10(sp.Sxx_range)
-        #bin_edges = sp.t-epoch_duration/2.        
-        #im = axx[panel].pcolormesh(bin_edges[ia:ib+1], 
-                                #sp.f, 
-                                #np.log10(sp.Sxx[:,ia:ib+1]), 
-                                #cmap='viridis', 
-                                #vmin=rr[0], 
-                                #vmax=rr[1])
-        #cbar = figx.colorbar(im, ax=axx[panel], pad=0.01, fraction=0.02, aspect=10)
-        #axx[panel].set_ylabel('%s\n f [Hz]' % (sp.label))
-        #axx[panel].grid(True)
-        #if i == len(spectrograms)-1:
-            #axx[panel].set_xlabel('Time [sec]')
-            ##print(axx[panel].get_xlim())
-        #else:
-            #axx[panel].set_xticks([])
-        pass
-
-
-
 
 
 
 
 
 from scipy.signal import butter, lfilter
-# import numpy as np
-# import matplotlib.pyplot as plt
-# from scipy.signal import freqz
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     """
@@ -680,14 +632,6 @@ def butter_filter(data, fs, lowcut=None, highcut=None, order=5):
     elif highcut is None:
         b, a = butter_high(highcut, fs, order=order)
         
-    y = lfilter(b, a, data)
-    return y
-
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
-    """
-    https://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
-    """
-    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
     y = lfilter(b, a, data)
     return y
 
@@ -770,6 +714,7 @@ class EDFData(object):
         """load edf, extract signals, compute spectrograms
 
         TODO:
+        - should be an EDFReader w load method
         - loading signals should be its own method
         - epoch_length as input argument
         """
@@ -845,9 +790,6 @@ class EDFData(object):
             filename=edf,
             startdate=startdate,
             starttime=starttime,
-            #epoch_duration_s=epoch_duration,
-            #num_epochs=num_epochs,
-            #num_samples=num_samples,
             EEG1_freq=signal_traces['EEG1'].f,
             EEG2_freq=signal_traces['EEG2'].f,
             EMG_freq=signal_traces['EMG'].f,
@@ -887,14 +829,6 @@ class EDFData(object):
 
 
 
-    # def dfTrialEpoch(self):
-    #     """return a dataframe with trial and epochs for appending to others"""
-    #     epochs = range(1, self.num_epochs+1)
-    #     trial = [self.trial]*self.num_epochs
-    #     cols = ['Epoch#', 'trial']
-        
-    #     df = pd.DataFrame(data=zip(epochs,trial), columns=cols)
-    #     return df
     
 
 def eigsorted(cov):
@@ -906,6 +840,8 @@ def eigsorted(cov):
 
 def split_features_by_scores(features=None, scores=None):
     """split a feature block by scores
+
+    used to analyze or plot score-specific features (i.e. from one sleep state)
 
     - block rows are features and columns are observations
     - extends to downstream features (PC projections)
@@ -967,6 +903,7 @@ def plot_spectrogram_cleanup(data, out='plot-sxx-cleanup.png'):
     
     """
     
+    raise Exception('plot_spectrogram_cleanup needs maintenance')
     
     #== plotting raw and pre-processed power spectra
     figx = plt.figure(figsize=(12, 8), dpi=100)
