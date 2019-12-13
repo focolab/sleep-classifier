@@ -97,6 +97,7 @@ if args.c is not None:
 
     # make a scoreblock and dump it
     sb_stack = sb.ScoreBlock(df=df_stack, index_cols=index_cols)
+    sb_stack.add_const_index_col(name='scoreType', value='human', inplace=True)
     sb_stack.to_json(os.path.join(args.dest, 'scoreblock-alldata-raw.json'))
 
     # score fractions
@@ -107,6 +108,7 @@ if args.c is not None:
     for trial, day in td_uniq:
         df_td = df_stack[(df_stack['trial']==trial) & (df_stack['day']==day)]
         sb_td = sb.ScoreBlock(df=df_td, index_cols=index_cols)
+        sb_td.add_const_index_col(name='scoreType', value='human', inplace=True)
         jf = 'scoreblock-trial-%s-day-%i.json' % (str(trial), day)
         sb_td.to_json(os.path.join(args.dest, jf))
 
