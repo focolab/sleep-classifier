@@ -19,6 +19,14 @@ import remtools as rt
 import scoreblock as sb
 
 
+def make_spectrogram_params():
+    """defaults"""
+    pEEG = dict(lowpass=20,  highpass=2,  logscale=False, normalize=True, medianfilter=9, stride=5)
+    pEMG = dict(lowpass=100, highpass=30, logscale=False, normalize=True, medianfilter=9, stride=10)
+    dd = dict(spectrogram=dict(EEG=pEEG, EMG=pEMG))
+    return dd
+
+
 def compute_spectrogram_features(edfd=None, params={}):
     """compute spectrogram based features
     
@@ -32,13 +40,14 @@ def compute_spectrogram_features(edfd=None, params={}):
 
     output
     ------
-    scoreblock?
+    scoreblock
 
     """
 
     # defaults
-    pEEG = dict(lowpass=20,  highpass=2,  logscale=False, normalize=True, medianfilter=9, stride=5)
-    pEMG = dict(lowpass=100, highpass=130, logscale=False, normalize=True, medianfilter=9, stride=10)
+    default_params = make_spectrogram_params()
+    pEEG = default_params['spectrogram']['EEG']
+    pEMG = default_params['spectrogram']['EMG']
 
     pEEG.update(params.get('EEG', {}))
     pEMG.update(params.get('EMG', {}))
@@ -66,27 +75,16 @@ def compute_power_features():
 #=========================================================================================
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', type=str, help='csv file of score/edf file pairs')
-parser.add_argument('-p', type=str, default=None, help='preprocessing parameters param-staging.json')
+parser.add_argument('-p', type=str, required=True, help='preprocessing parameters param-staging.json')
 parser.add_argument('--dest', type=str, default='ANL-preprocess', help='destination folder')
 args = parser.parse_args()
 
 os.makedirs(args.dest, exist_ok=True)
 
-
-#== Staging Parameters NOTE: needless complexity, just use a dictionary
-if args.p is not None:
-    stgparam = rt.StagingParameters.from_json(args.p)
-    #with open(jsonfile) as jfopen:
-        #jdic = json.load(jfopen)
-        #pEEG = jdic['preprocessing']['EEG']
-        #pEMG = jdic['preprocessing']['EMG']
-else:
-    pEEG = dict(lowpass=20,  highpass=2,  logscale=False, normalize=True, medianfilter=9, stride=5)
-    pEMG = dict(lowpass=100, highpass=30, logscale=False, normalize=True, medianfilter=9, stride=10)
-    stgparam = rt.StagingParameters(spectrogram=dict(EEG=pEEG, EMG=pEMG))
-    stgparam.to_json(out=os.path.join(args.dest, 'param-staging.json'))
-pEEG = stgparam.spectrogram['EEG']
-pEMG = stgparam.spectrogram['EMG']
+#== Staging Parameters
+# TODO: what about different featurization schemes?
+with open(args.p) as jfopen:
+    jdic = json.load(jfopen)
 
 #== load files
 load = pd.read_csv(args.c)
@@ -95,42 +93,39 @@ print(load)
 print('=====================')
 allTrialData = []
 for index, row in load.iterrows():
-    trial = row['trial']
-    scoreFile = row['scores']
-    edfFile = row['edf']
-    fldr = os.path.join(args.dest, 'trial-%s' % (str(trial)))
-    
     #== load edf and scores
-    edf = rt.EDFData(edf=edfFile)
+    edf = rt.EDFData(edf=row['edf'])
 
-    #sw = None
-    if not isinstance(scoreFile, str):
+    # scores
+    try:
+        scoreblock = sb.ScoreBlock.from_json(row['scores'])
+    except:
         scoreblock = None
-    else:
-        if os.path.exists(scoreFile):
-            scoreblock = sb.ScoreBlock.from_json(scoreFile)
 
-        else:
-            scoreblock = None
-
-
+    # tags and metadata
     tagDict = dict()
-    tagDict['trial'] = trial
+    tagDict['trial'] = row.get('trial', 'trialXX')
     tagDict['genotype'] = row.get('genotype', 'x')
     tagDict['day'] = row.get('day', 1)
 
+    # featurize
+    if 'spectrogram' in jdic.keys():
+        params = jdic['spectrogram']
+        features_scb = compute_spectrogram_features(edfd=edf, params=params)
+    else:
+        raise Exception('params not recognized')
 
-    params = dict(EEG=pEEG, EMG=pEMG)
-    features_scb = compute_spectrogram_features(edfd=edf, params=params)
+
+    fldr = os.path.join(args.dest, 'trial-%s' % (str(tagDict['trial'])))
 
     #== preprocess spectrograms, stage data for modeling
     std = rt.StagedTrialData(
         loc=fldr, 
         edf=edf,
-        features=features_scb,
         scoreblock=scoreblock,
-        trial=trial,
-        stagingParameters=stgparam,
+        trial=tagDict['trial'],
+        features=features_scb,
+        stagingParameters=jdic,
         tagDict=tagDict
         )
 
