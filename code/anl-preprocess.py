@@ -40,9 +40,17 @@ def compute_spectrogram_features(edfd=None, params={}):
     pEEG.update(params.get('EEG', {}))
     pEMG.update(params.get('EMG', {}))
 
-    # this is convolutedddd
-    sxxb = rt.SxxBundle.from_EDFData(edf).prep(pEEG=pEEG, pEMG=pEMG)
-    scb = sxxb.to_scoreblock()
+    # preprocess each spectrogram
+    EEG1 = edfd.spectrograms['EEG1'].prep(pEEG).to_df
+    EEG2 = edfd.spectrograms['EEG2'].prep(pEEG).to_df
+    EMG = edfd.spectrograms['EMG'].prep(pEMG).to_df
+
+    # build a scoreblock
+    dd = dict(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
+    df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
+    index_cols = ['channel','f[Hz]']
+    scb = sb.ScoreBlock(df=df, index_cols=index_cols)
+
 
     return scb
 

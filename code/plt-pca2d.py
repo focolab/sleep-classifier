@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs='+', type=str, help='staged trial data json files')
     parser.add_argument('-p', type=str, help='pca json')
-    parser.add_argument('-s', default='', type=str, help='scoreblock.json')
+    parser.add_argument('-s', default=None, type=str, help='scoreblock.json')
     parser.add_argument('--dest', default='ANL-plt-pca2d', help='output folder')
     args = parser.parse_args()
 
@@ -86,7 +86,6 @@ if __name__ == '__main__':
     if pca_hist_kwa.get('levels', None) in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
         for std in allTrialData:
-            #X = std.sxxb_prep.to_dataframe().values
             X = std.features.data
             lims = pt.plot_PCA_2D_hist(X=X, pca=pca, justlimits=True, **pca_hist_kwa)
             cmin = min(cmin, lims[0])
@@ -109,7 +108,8 @@ if __name__ == '__main__':
         tag = 'GT-%s-trial-%s' % (str(gt), str(trial))
         print('plotting: %s' % (tag))
 
-        X = std.sxxb_prep.to_dataframe().values
+        X = std.features.data
+
         df_prj = pca.project(data=X, PCs=pca_hist_kwa['PCs'])
 
         # split data by scores

@@ -271,19 +271,19 @@ if __name__ == '__main__':
 
     block_pwr_data = []
     for std in allTrialData:
-        print(std.trial)
-        df_feat = std.sxxb_prep.to_dataframe()
+        df_index = std.features.df_index
 
         data = []
         # power dist for each block
         for b in blocks:
             # filter by channel/freq
-            val1 = df_feat.index.get_level_values('channel') == b[0]
-            val2 = np.isin(df_feat.index.get_level_values('f[Hz]'), b[1])
-            df = df_feat[val1 & val2]
+            val1 = df_index['channel'] == b[0]
+            val2 = np.isin(df_index['f[Hz]'], b[1])
+
+            x = std.features.data[val1 & val2].ravel()
 
             # histogram
-            h = np.histogram(df.values.ravel(), bins=xdom)[0]
+            h = np.histogram(x, bins=xdom)[0]
             data.append(h)
 
 
@@ -348,7 +348,9 @@ if __name__ == '__main__':
 
     # PLOTTING
     for std in allTrialData:
+        raise Exception('use std.features instead of sxxb_prep')
         df_feat = std.sxxb_prep.to_dataframe()
+
 
         # plot feature vectors for each trial, split by sleep state
         try:

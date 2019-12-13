@@ -112,7 +112,7 @@ if __name__ == '__main__':
     data = []
     ndx = []
     for nameT, td in trials.items():
-        X = td.sxxb_prep.stack.T
+        X = td.features.data.T
         for nameM, mdl in models.items():
             fmd = mdl['full_model']
 

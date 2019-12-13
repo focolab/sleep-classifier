@@ -505,103 +505,102 @@ class PCHisto(object):
 
 
 
-class SxxBundle(object):
-    """Bundle of spectrograms (typically for one trial)
-    """
-    def __init__(self, EEG1=None, EEG2=None, EMG=None):
-        self.EEG1 = EEG1
-        self.EEG2 = EEG2
-        self.EMG = EMG
-        self.spectrograms = dict(EEG1=self.EEG1, EEG2=self.EEG2, EMG=self.EMG)
+# class SxxBundle(object):
+#     """Bundle of spectrograms (typically for one trial)
+#     """
+#     def __init__(self, EEG1=None, EEG2=None, EMG=None):
+#         self.EEG1 = EEG1
+#         self.EEG2 = EEG2
+#         self.EMG = EMG
+#         self.spectrograms = dict(EEG1=self.EEG1, EEG2=self.EEG2, EMG=self.EMG)
 
-    @classmethod
-    def from_EDFData(cls, edfd):
-        """build using raw spectrograms from EDFData"""
-        EEG1 = edfd.spectrograms['EEG1']
-        EEG2 = edfd.spectrograms['EEG2']
-        EMG = edfd.spectrograms['EMG']
-        return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
+#     @classmethod
+#     def from_EDFData(cls, edfd):
+#         """build using raw spectrograms from EDFData"""
+#         EEG1 = edfd.spectrograms['EEG1']
+#         EEG2 = edfd.spectrograms['EEG2']
+#         EMG = edfd.spectrograms['EMG']
+#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
 
-    @property
-    def stack(self):
-        """stack Sxx data on frequency axis """
-        return np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
+#     @property
+#     def stack(self):
+#         """stack Sxx data on frequency axis """
+#         return np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
 
-    @classmethod
-    def fuse(cls, bundles):
-        """fuse together SxxBundles (join trials on the time axis)"""
-        sxxA = [bundle.EEG1 for bundle in bundles]
-        sxxB = [bundle.EEG2 for bundle in bundles]
-        sxxC = [bundle.EMG for bundle in bundles]
-        EEG1 = sxxA[0].concatenate(others=sxxA[1:])
-        EEG2 = sxxB[0].concatenate(others=sxxB[1:])
-        EMG  = sxxC[0].concatenate(others=sxxC[1:])
-        return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
+#     @classmethod
+#     def fuse(cls, bundles):
+#         """fuse together SxxBundles (join trials on the time axis)"""
+#         sxxA = [bundle.EEG1 for bundle in bundles]
+#         sxxB = [bundle.EEG2 for bundle in bundles]
+#         sxxC = [bundle.EMG for bundle in bundles]
+#         EEG1 = sxxA[0].concatenate(others=sxxA[1:])
+#         EEG2 = sxxB[0].concatenate(others=sxxB[1:])
+#         EMG  = sxxC[0].concatenate(others=sxxC[1:])
+#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
 
-    def pca(self):
-        """run PCA on the stacked data"""
-        stack = np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
-        return PCA(stack)
+#     def pca(self):
+#         """run PCA on the stacked data"""
+#         stack = np.vstack([self.EEG1.Sxx, self.EEG2.Sxx, self.EMG.Sxx])
+#         return PCA(stack)
 
-    def to_scoreblock(self):
-        """not scores, but scoreblock is a useful container"""
-        import scoreblock as sb
-        dd = dict(
-            EEG1=self.EEG1.to_df,
-            EEG2=self.EEG2.to_df,
-            EMG=self.EMG.to_df
-            )
-        df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
-        index_cols = ['channel','f[Hz]']
-        return sb.ScoreBlock(df=df, index_cols=index_cols)
+#     def to_scoreblock(self):
+#         """not scores, but scoreblock is a useful container"""
+#         import scoreblock as sb
+#         dd = dict(
+#             EEG1=self.EEG1.to_df,
+#             EEG2=self.EEG2.to_df,
+#             EMG=self.EMG.to_df
+#             )
+#         df = pd.concat(dd).reset_index().rename(columns={'level_0': 'channel'})
+#         index_cols = ['channel','f[Hz]']
+#         return sb.ScoreBlock(df=df, index_cols=index_cols)
 
+#     def to_dataframe(self):
+#         """one dataframe with a multiindex to track channels"""
+#         dd = dict(EEG1=self.EEG1.to_df,
+#                   EEG2=self.EEG2.to_df,
+#                   EMG=self.EMG.to_df
+#                   )
+#         df = pd.concat(dd)
+#         df.index.set_names(['channel','f[Hz]'], inplace=True)
+#         return df
 
-    def to_dataframe(self):
-        """one dataframe with a multiindex to track channels"""
-        dd = dict(EEG1=self.EEG1.to_df,
-                  EEG2=self.EEG2.to_df,
-                  EMG=self.EMG.to_df
-                  )
-        df = pd.concat(dd)
-        df.index.set_names(['channel','f[Hz]'], inplace=True)
-        return df
+#     def to_csv(self, csv='sxx_bundle.csv'):
+#         """make a multi-index dataframe and write it to csv"""
+#         self.to_dataframe().to_csv(csv, float_format='%g')
+#         return
 
-    def to_csv(self, csv='sxx_bundle.csv'):
-        """make a multi-index dataframe and write it to csv"""
-        self.to_dataframe().to_csv(csv, float_format='%g')
-        return
+#     @classmethod
+#     def from_csv(cls, csv=None):
+#         """"""
+#         df = pd.read_csv(csv, index_col=[0,1])
 
-    @classmethod
-    def from_csv(cls, csv=None):
-        """"""
-        df = pd.read_csv(csv, index_col=[0,1])
+#         dfEEG1 = df.loc['EEG1']
+#         dfEEG2 = df.loc['EEG2']
+#         dfEMG = df.loc['EMG']
+#         EEG1 = Spectrogram.from_df(df=dfEEG1, label='EEG1')
+#         EEG2 = Spectrogram.from_df(df=dfEEG2, label='EEG2')
+#         EMG = Spectrogram.from_df(df=dfEMG, label='EMG')
 
-        dfEEG1 = df.loc['EEG1']
-        dfEEG2 = df.loc['EEG2']
-        dfEMG = df.loc['EMG']
-        EEG1 = Spectrogram.from_df(df=dfEEG1, label='EEG1')
-        EEG2 = Spectrogram.from_df(df=dfEEG2, label='EEG2')
-        EMG = Spectrogram.from_df(df=dfEMG, label='EMG')
-
-        return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
+#         return cls(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
 
     
-    def prep(self, pEEG=None, pEMG=None):
-        """preprocessing"""
-        #== merge default parameters with input
-        pEEGd = dict(lowpass=None, highpass=None, logscale=False, 
-                     normalize=False, medianfilter=None, stride=None)
-        pEMGd = dict(lowpass=None, highpass=None, logscale=False, 
-                     normalize=False, medianfilter=None, stride=None)
-        pEEGd.update(pEEG)
-        pEMGd.update(pEMG)
-        self.params = dict(EEG=pEEGd, EMG=pEMGd)
+#     def prep(self, pEEG=None, pEMG=None):
+#         """preprocessing"""
+#         #== merge default parameters with input
+#         pEEGd = dict(lowpass=None, highpass=None, logscale=False, 
+#                      normalize=False, medianfilter=None, stride=None)
+#         pEMGd = dict(lowpass=None, highpass=None, logscale=False, 
+#                      normalize=False, medianfilter=None, stride=None)
+#         pEEGd.update(pEEG)
+#         pEMGd.update(pEMG)
+#         self.params = dict(EEG=pEEGd, EMG=pEMGd)
 
-        EEG1 = self.EEG1.prep(pEEGd)
-        EEG2 = self.EEG2.prep(pEEGd)
-        EMG = self.EMG.prep(pEMG)
+#         EEG1 = self.EEG1.prep(pEEGd)
+#         EEG2 = self.EEG2.prep(pEEGd)
+#         EMG = self.EMG.prep(pEMG)
 
-        return SxxBundle(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
+#         return SxxBundle(EEG1=EEG1, EEG2=EEG2, EMG=EMG)
 
 
 

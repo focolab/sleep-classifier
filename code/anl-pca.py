@@ -30,8 +30,8 @@ if __name__ == '__main__':
     # staging
     # load trial data
     allTrialData = [rt.StagedTrialData.from_json(f, loadEDF=False) for f in args.f]
-    Xcat = np.vstack([std.sxxb_prep.stack.T for std in allTrialData])
-    df_index = allTrialData[0].sxxb_prep.to_dataframe().index.to_frame().reset_index(drop=True)
+    Xcat = np.vstack([std.features.data.T for std in allTrialData])
+    df_index = allTrialData[0].features.df_index
 
     # compute pca
     pca = rt.PCA.from_data(Xcat.T, df_index=df_index)
@@ -40,12 +40,12 @@ if __name__ == '__main__':
     # project training data
     prj_data = []
     for std in allTrialData:
-        df_prj = pca.project(std.sxxb_prep.stack, num_EV=3)
+        df_prj = pca.project(std.features.data, num_EV=3)
         df_prj['trial'] = [str(std.trial)]*len(df_prj)
         prj_data.append(df_prj)
     df_prj = pd.concat(prj_data, axis=0).reset_index(drop=True)
 
-    d0 = allTrialData[0].sxxb_prep.stack
+    d0 = allTrialData[0].features.data
     pca.plotSummary(f=os.path.join(args.dest, 'plot-pca-summary.png'), data=d0)
 
 

@@ -69,24 +69,21 @@ class EEGPlotter(object):
 
         self.scores = scores
 
-        self.df_prj = self.pca.project(std.features.values)
+
+        self.df_prj = self.pca.project(std.features.data)
 
         self.params = self.default_params()
         self.params.update(params)
 
         # FEATURES
-        self.df_feat = self.std.sxxb_prep.to_dataframe()
-        self.X = self.std.features.values
+        self.X = self.std.features.data
 
         # RAW features (normalize, stride)
-
         # # raw features, look like shit w/current formatting
         # self.df_feat = rt.SxxBundle.from_EDFData(self.std.edf).to_dataframe()
 
-
         # stash (time consuming) computed values here for re-use
         self.stash = {}
-
 
         # initial viewstate
         self.viewEpoch = 100
@@ -261,7 +258,6 @@ class EEGPlotter(object):
 
         edf = self.std.edf
         dfmerge = self.df_prj
-        sw = self.std.sw
         num_epochs = edf.num_epochs
         epoch_duration = edf.epoch_duration
         spectrograms = edf.spectrograms
@@ -517,8 +513,8 @@ class EEGPlotter(object):
 
         t60 = time.time()
 
+        df_feat_index = self.std.features.df_index
 
-        df_feat_index = self.df_feat.index.to_frame().reset_index(drop=True)
         unique_scores = ['all']
         gt_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -546,7 +542,7 @@ class EEGPlotter(object):
             for it in range(ia, ib):
                 cc = gt_colors[it % len(gt_colors)]
                 xx = chi['xndx']
-                yy = self.df_feat.values[chi['ndx'], it]*feature_scale+it+1
+                yy = self.std.features.data[chi['ndx'], it]*feature_scale+it+1
                 ccc.append(cc)
                 xxx.append(xx)
                 yyy.append(yy)
