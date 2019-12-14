@@ -623,7 +623,8 @@ def butter_filter(data, fs, lowcut=None, highcut=None, order=5):
     """
 
     if lowcut is None and highcut is None:
-        raise Exception('butter_filter requires lowcut, highcut, or both')
+        return data
+        #raise Exception('butter_filter requires lowcut, highcut, or both')
 
     if lowcut is not None and highcut is not None:
         b, a = butter_bandpass(lowcut, highcut, fs, order=order)
