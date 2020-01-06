@@ -716,8 +716,8 @@ class EDFData(object):
 
         TODO:
         - should be an EDFReader w load method
-        - loading signals should be its own method
-        - epoch_length as input argument
+        - loading signals should be its own method (channels arg)
+        - spectrograms should be own method (epoch_length as arg)
         """
         
         f = pyedflib.EdfReader(edf)

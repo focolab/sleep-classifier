@@ -35,6 +35,8 @@ def compute_spectrogram_features(edfd=None, params={}):
     WWRW: spectrogram specific things are contained here, features used
         elsewhere are not assumed to derive from spectrograms
 
+    TODO: rename powspec
+
     input
     ------
     edfd (EDFData)
@@ -94,11 +96,14 @@ def make_rmspower_params():
 def compute_power_features(edfd=None, params=None):
     """compute rms power features
 
+    TODO: rename rmspow
     TODO: extract the inner function
+    TODO: for this to work as intented, every featurization needs to use the
+          same epochLength.
 
     - params contains a list of parameter dicts
     - each dict generates one RMSpower featurization
-    - many of these could be passed, to chop input signals into diffrent bands
+    - this allows for chopping input signals into diffrent bands
     - the output is a scoreblock of stacked feature row vectors (not really
         scores, but its a useful data container)
 
@@ -117,8 +122,6 @@ def compute_power_features(edfd=None, params=None):
 
     if params is None:
         params = make_rmspower_params()['rmspower']
-
-        print(params)
 
     scoreblocks = []
     for pp in params:
@@ -186,9 +189,9 @@ def compute_power_features(edfd=None, params=None):
 
 
 
-#=========================================================================================
-#=============================== main program ============================================
-#=========================================================================================
+#==============================================================================
+#=============================== main program =================================
+#==============================================================================
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', type=str, help='csv file of score/edf file pairs')
 parser.add_argument('-p', type=str, required=True, help='preprocessing parameters param-staging.json')

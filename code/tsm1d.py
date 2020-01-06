@@ -12,6 +12,8 @@ import scoreblock as sb
 class TimeSeriesModel1D(object):
     """1D time series model
 
+    TODO: do we need this? used a lot in ipynb
+
     built with signal power analysis in mind
 
     given a time series, compute
@@ -145,7 +147,11 @@ class TwoStateGMMClassifier(object):
     2) Points close to the (inner) decision boundary are assigned the switch state
        if |p0-p1| < pdiff
 
-    
+
+    TODO: peak scaling transformation (two peaks at -1, 1)
+
+    TODO: alt constructor from_data() or train().. get sklearn.mixture.GMM inside here
+
     TODO: sklearn.mixture.GMM could be (de-)serialized by tracking:
             n_components
             precisions_init
@@ -225,6 +231,8 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
     - signal processing
     - feature building (rms power)
     - builds a 1D time series model
+
+    TODO: featurization code is duplicated in anl-preprocess, deprecate THIS
 
     NOTE: processing steps here might need to be split apart
             (rms power, block averaging, median filtering, log scaling, mean subtraction)
