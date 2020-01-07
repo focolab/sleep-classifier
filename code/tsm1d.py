@@ -174,6 +174,21 @@ class TwoStateGMMClassifier(object):
         self.x0 = np.min(self.means)
         self.x1 = np.max(self.means)
 
+    
+    @classmethod
+    def from_data(cls, x):
+
+        from sklearn import mixture
+        # make a Gaussian Mixture Model (sklearn version)
+        clf = mixture.GaussianMixture(n_components=2).fit(x.reshape(-1,1))
+        return cls(clf=clf)
+
+    def about(self):
+        """"""
+        print('--- TwoStateGMMClassifier.about() ---')
+        print('means  :', self.means)
+        print('weights:', self.weights)
+
 
     def xinterval(self, pdiff=0.9):
         """find the switch interval numerically"""
@@ -197,7 +212,11 @@ class TwoStateGMMClassifier(object):
 
         output
         ------
-        pred : np.array of predictions in {0,1,-1} (-1 for switching)
+        pred : np.array of predictions in [0,1,-1]
+            0: low
+            1: high
+           -1: switching
+
         """
 
         pred_probs = self.clf.predict_proba(X.reshape(-1, 1))
@@ -303,7 +322,7 @@ def test_full():
     - score preditions
 
     """
-    import remtools as rt
+    #import remtools as rt
     import matplotlib.pyplot as plt
 
     os.makedirs('scratch', exist_ok=True)
@@ -374,8 +393,33 @@ def test_full():
     plt.savefig('scratch/plot-ts-model-1D-demo.png')
 
 
+
+def test_TwoStateGMMClassifier_fromdata():
+
+
+    os.makedirs('scratch', exist_ok=True)
+    np.random.seed(seed=123)
+
+    # generate time series (sin wave)
+    t = np.arange(81)
+    x = 1*np.sin(0.05*t/2*np.pi)
+    # x = 2/(1+np.exp(0.2*(200-t)))-1
+    # x += np.random.randn(len(t))*0.2
+
+    myGMM = TwoStateGMMClassifier.from_data(x)
+
+
+    print(myGMM.xinterval(pdiff=0.99))
+
+    # metaData = {}
+
+    # # build the model
+    # m = TimeSeriesModel1D(t=t, x=x, metaData=metaData)
+
+
+
 if __name__ == '__main__':
 
-
-    test_full()
+    test_TwoStateGMMClassifier_fromdata()
+    #test_full()
 
