@@ -361,9 +361,8 @@ class ScoreBlock(object):
             mask = slice(None)
 
         data = self.data[:, mask]
-        data_cols = self.data_cols[mask]
+        data_cols = np.asarray(self.data_cols)[mask].tolist()
         df_data = pd.DataFrame(data=data, columns=data_cols)
-
         df_index = self.df_index.copy()
 
         # update index with mask column?
@@ -771,8 +770,42 @@ def test_scoreblock_count():
     assert stk.df['duck'].values[-1] == -2, 'should be -2'
 
 
+def test_bool_mask():
+    """test boolean mask"""
+
+    tagDict = dict(name='gallahad', quest='grail', color='blue')
+
+    # some categorical data (N=6 columns)
+    N = 6
+    data = [
+        ['duck', 'herring', 'stoat', 'stoat', 'stoat', 'herring'],
+        ['duck', 'stoat', 'duck', 'stoat', 'stoat', 'herring'],
+        ['stoat', 'duck', 'duck', 'herring', 'stoat', 'herring'],
+        ['herring', 'herring', 'stoat', 'stoat', 'stoat', 'herring']
+    ]
+
+    # ScoreBlock 1
+    data_cols = ['dc-%4.4i' % n for n in range(N)]
+    ndx = zip([0, 1, 2, 3], ['a', 'b', 'c', 'd'])
+    index_cols = ['number', 'letter']
+    df1 = pd.DataFrame(data=ndx, columns=index_cols)
+    df2 = pd.DataFrame(data=data, columns=data_cols)
+    df = pd.concat([df1, df2], axis=1)
+    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
+
+    # make mask and apply it
+    mask00 = [True, True, True, False, True, False]
+    sb_mask00 = sb1.mask(mask=mask00, maskname='mask00')
+
+    assert sb_mask00.data_cols == ['dc-0000','dc-0001','dc-0002','dc-0004']
+
+    sb_mask00.about()
+    pdb.set_trace()
+
+
 if __name__ == '__main__':
 
+    test_bool_mask()
     test_scoreblock_count()
     test_scoreblock_consensus()
     #test_scoreblock_keeprows()
