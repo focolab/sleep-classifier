@@ -39,6 +39,7 @@ def plot_confusion_matrix(ax=None,
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    Normalization is scaled by 100 to give percentages
     """
     if not title:
         if normalize:
@@ -51,8 +52,8 @@ def plot_confusion_matrix(ax=None,
     # Only use the labels that appear in the data
     #classes = classes[unique_labels(y_true, y_pred)]
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         #print("plotting normalized confusion matrix")
+        cm = 100*cm.astype('float')/np.sum(cm.ravel())
     else:
         pass
         #print('plotting confusion matrix, without normalization')
@@ -78,7 +79,8 @@ def plot_confusion_matrix(ax=None,
              rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
+    #fmt = '.2f' if normalize else 'd'
+    fmt = '.1f' if normalize else 'd'
     thresh = cm.max() / 2.
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
@@ -202,6 +204,9 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
                      cbar=True
                      ):
     """plot a histogram of data projected onto a 2D PC basis
+
+    TODO: disentangle 2D histo from PCA specifics. WWRW is general 2D plotter
+
 
     arguments:
     ------
