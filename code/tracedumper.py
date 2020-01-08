@@ -165,7 +165,9 @@ class TraceDumper(object):
         """"""
 
         self.fig.savefig(filename)
-        
+
+    def resetRC(self):
+        matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 
     def export_full_pdf(self, f=None, pages=None, dpi=150):
@@ -220,6 +222,7 @@ class TraceDumper(object):
         
 
         conflict_cols = ['OVO-24h_8ch', 'hum-consensus']
+        conflict_cols = ['EMG_mfw00__test', 'hum-consensus']
 
         scoremap = {
             'Wake':0.9999,
@@ -229,7 +232,9 @@ class TraceDumper(object):
             'REM X':np.nan,
             'Unscored':np.nan,
             'Wake X':np.nan,
-            'XXX':np.nan
+            'XXX':np.nan,
+            'Sleep':0.0,
+            'Switch':0.25,
         }
 
         epoch_tick_stride = 6
@@ -357,7 +362,8 @@ class TraceDumper(object):
             # humans fully agree, but disagree with the OVO model
 
             cond_a = [('scoreTag', 'hum-consensus')]
-            cond_b = [('scoreTag', 'hum-consensus'), ('scoreTag', 'OVO-24h_8ch')]
+            #cond_b = [('scoreTag', 'hum-consensus'), ('scoreTag', 'OVO-24h_8ch')]
+            cond_b = [('scoreTag', 'hum-consensus'), ('scoreTag', 'EMG_mfw00_test')]
             hc = self.scores.mask(mask=slice(ea, eb)).keeprows(conditions=cond_a).data
             hm = self.scores.mask(mask=slice(ea, eb)).keeprows(conditions=cond_b, comparison='any').consensus(out='data_only')
 
