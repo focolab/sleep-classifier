@@ -341,12 +341,11 @@ class PCA(object):
 
 
         # PCHisto class
-        pch = PCHisto(
+        pch = Histo2D(
             dims=df_prj.columns.tolist(), 
             bin_edges=bin_edges, 
             hist=hist, 
             tagDict=tagDict, 
-            pca=self
             )
 
         return pch
@@ -419,8 +418,8 @@ class PCA(object):
 
 
 
-class PCHisto(object):
-    """histogram of PC projected data
+class Histo2D(object):
+    """2D histogram, with some extra info
 
     attributes
     ------
@@ -428,20 +427,45 @@ class PCHisto(object):
     hist (ND array): bin counts
     dims (list) : names of the dimensions
     tagDict (dict) : metadata tags (trial/genotype etc)
-    pca (remtools.PCA) : PCA used for projection
 
     """
-    def __init__(self, dims=None, bin_edges=None, hist=None, tagDict={}, pca=None):
+    def __init__(self, dims=None, bin_edges=None, hist=None, tagDict={}):
 
         self.tagDict = tagDict
-        self.pca = pca
         self.dims = dims
         self.bin_edges = bin_edges
         self.hist = hist
 
-    def about(self):
+    def normalize(self):
 
-        print('------ PCHisto.about() ---------')
+        h = self.hist/np.sum(self.hist.ravel())
+        return Histo2D(
+            tagDict=self.tagDict,
+            dims=self.dims,
+            bin_edges=self.bin_edges,
+            hist=h
+        )
+
+    def logscale(self, tiny=0.1):
+        """
+        tiny should be between zero and the smallest bin count
+        """
+        z = np.log(self.hist+tiny)
+        return Histo2D(
+            tagDict=self.tagDict,
+            dims=self.dims,
+            bin_edges=self.bin_edges,
+            hist=z
+        )
+
+    @property
+    def range(self):
+        return [np.min(self.hist.ravel()), np.max(self.hist.ravel())]
+
+
+
+    def about(self):
+        print('------ Histo2D.about() ---------')
         print(self.tagDict)
         print(self.dims)
 
