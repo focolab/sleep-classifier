@@ -189,13 +189,9 @@ def plot_features_template(df_feat_index=None, unique_scores=None,
     return fig, ax, channel_info
 
 
-def plot_PCA_2D_hist(X=None, pca=None, ax=None, 
-                     h2d=None,
-                     PCs=[1,2],
-                     justlimits=False,
+def plot_2D_hist(ax=None, h2d=None,
+                 justlimits=False,
                      levels=None,
-                     #xdom=None, ydom=None,
-                     numsig=3, numbin=60,
                      cmap='rocket', 
                      log=True,
                      normalize=False,
@@ -203,24 +199,19 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
                      ptype='contourf',
                      cbar=True
                      ):
-    """plot a histogram of data projected onto a 2D PC basis
+    """plot a histogram of data projected onto a 2D basis
 
-    TODO: disentangle 2D histo from PCA specifics. WWRW is general 2D plotter
-
+    TODO: PCA FREE
+    NOTE: this is only the histogram (raw data not plotted here)
+    TODO: justlimits should be a method of h2d
 
     arguments:
     ------
-    X: the data
-    pca: remtools.PCA instance
-    h2d: histo2D object (otherwise it is computed here)
+    h2d: histo2D object
     ax: axes on which to plot
-    PCs: PC indices (1 indexed)
     justlimits: compute histogram but only return the limits (for multiple plots)
     levels: contour levels (also sets the colorbar limits)
 
-    xdom/ydom: x/y bin edges (disabled)
-    numsig: (autogrid) make x/ydom span +/- numsig sigmas (PCA eigenvalues)
-    numbin: (autogrid) how many bins within x/ydom
     cmap: colormap for contour/imshow
     log: log scale or not
     normalize: normalize?
@@ -231,11 +222,10 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
     gridkwa = dict(color='white', alpha=0.7)
 
 
-    # all in one go
     if h2d is None:
-        h2d = pca.project_histo(data=X, PCs=PCs, numsig=numsig, numbin=numbin)
-        
-    h = h2d.hist
+        raise Exception('h2d required')
+    
+
     xlbl = h2d.dims[0]
     ylbl = h2d.dims[1]
     xdom = h2d.bin_edges[0]
@@ -244,21 +234,25 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
     ylim = [ydom[0], ydom[-1]]
     extent = (xdom[0], xdom[-1], ydom[0], ydom[-1])
 
-    sigX = np.sqrt(pca.vals[PCs[0]-1])
-    sigY = np.sqrt(pca.vals[PCs[1]-1])
+    # h = h2d.hist
+    # if normalize:
+    #     n = np.sum(h.ravel())
+    #     h = h/n
+    #     tiny = tiny/n
+    # if log:
+    #     zplt = np.log(h+tiny)
+    # else:
+    #     zplt = h
+    # zplt_min, zplt_max = min(zplt.ravel()), max(zplt.ravel())
 
 
     if normalize:
-        n = np.sum(h.ravel())
-        h = h/n
-        tiny = tiny/n
-
+        tiny = tiny/np.sum(h2d.hist.ravel())
+        h2d = h2d.normalize()
     if log:
-        zplt = np.log(h+tiny)
-    else:
-        zplt = h
-
-    zplt_min, zplt_max = min(zplt.ravel()), max(zplt.ravel())
+        h2d = h2d.logscale(tiny=tiny)
+    zplt = h2d.hist
+    [zplt_min, zplt_max] = h2d.range
 
     # useful for consistent colorbars across multiple plots :)
     if justlimits:
@@ -295,6 +289,92 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
     else:
         cb = None
 
+
+    # limits and labels
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_xlabel(xlbl)
+    ax.set_ylabel(ylbl)
+
+    return ax, cb
+
+
+def plot_PCA_2D_hist(X=None, pca=None, ax=None, 
+                     h2d=None,
+                     PCs=[1,2],
+                     justlimits=False,
+                     levels=None,
+                     numsig=3, numbin=60,
+                     cmap='rocket', 
+                     log=True,
+                     normalize=False,
+                     tiny=0.6,
+                     ptype='contourf',
+                     cbar=True
+                     ):
+    """plot a histogram of data projected onto a 2D PC basis
+
+    NOTE: this is only the histogram (raw data not plotted here)
+    TODO: disentangle 2D histo from PCA specifics. WWRW is general 2D plotter
+
+
+    arguments:
+    ------
+    X: the data
+    pca: remtools.PCA instance
+    h2d: histo2D object (otherwise it is computed here)
+    ax: axes on which to plot
+    PCs: PC indices (1 indexed)
+    justlimits: compute histogram but only return the limits (for multiple plots)
+    levels: contour levels (also sets the colorbar limits)
+
+    xdom/ydom: x/y bin edges (disabled)
+    numsig: (autogrid) make x/ydom span +/- numsig sigmas (PCA eigenvalues)
+    numbin: (autogrid) how many bins within x/ydom
+    cmap: colormap for contour/imshow
+    log: log scale or not
+    normalize: normalize?
+    tiny: tiny number added to bin counts (to avoid NaNs)
+    ptype: (contourf or imshow) which type of plot to plot    
+    """
+
+    gridkwa = dict(color='white', alpha=0.7)
+
+
+    # all in one go
+    if h2d is None:
+        h2d = pca.project_histo(data=X, PCs=PCs, numsig=numsig, numbin=numbin)
+    
+
+    if justlimits:
+        lims = plot_2D_hist(
+            h2d=h2d,
+            justlimits=True,
+            log=log,
+            normalize=normalize,
+            tiny=tiny,
+        )
+        return lims
+
+
+    ax, cb = plot_2D_hist(
+        ax=ax, 
+        h2d=h2d,
+        justlimits=False,
+        levels=levels,
+        cmap=cmap, 
+        log=log,
+        normalize=normalize,
+        tiny=tiny,
+        ptype=ptype,
+        cbar=cbar,     
+    )
+
+
+    # gussy it up (PCA SPECIFIC)
+    sigX = np.sqrt(pca.vals[PCs[0]-1])
+    sigY = np.sqrt(pca.vals[PCs[1]-1])
+
     # crosshairs, with ticks every 1 sigma
     ticksig = [1, 2]
     for tt in ticksig:
@@ -307,14 +387,7 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
             ax.plot([-xx, xx], [0, 0], '-', **gridkwa)
             ax.plot([0, 0], [-yy, yy], '-', **gridkwa)
 
-    # limits and labels
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    ax.set_xlabel(xlbl)
-    ax.set_ylabel(ylbl)
-
     return ax, cb
-
 
 
 def montage_raster(df_index=None, data=None, cmap='rocket', aspect=200,

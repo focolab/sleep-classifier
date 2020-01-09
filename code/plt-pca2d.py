@@ -82,10 +82,19 @@ if __name__ == '__main__':
     col1 = 'PC%i' % pca_hist_kwa['PCs'][0]
     col2 = 'PC%i' % pca_hist_kwa['PCs'][1]
 
+    # TODO: precompute Histo2D, h2d for each trial
+    # h2d = pca.project_histo(
+    #     data=X,
+    #     PCs=pca_hist_kwa['PCs'],
+    #     numsig=pca_hist_kwa['numsig'],
+    #     numbin=pca_hist_kwa['numbin'],
+    #     )
+
     # automatic range limits (inefficient, but convenient for multiple plots)
     if pca_hist_kwa.get('levels', None) in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
         for std in allTrialData:
+            # TODO: use precomputed h2d here
             X = std.features.data
             lims = pt.plot_PCA_2D_hist(X=X, pca=pca, justlimits=True, **pca_hist_kwa)
             cmin = min(cmin, lims[0])
