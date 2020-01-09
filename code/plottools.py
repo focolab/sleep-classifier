@@ -234,17 +234,6 @@ def plot_2D_hist(ax=None, h2d=None,
     ylim = [ydom[0], ydom[-1]]
     extent = (xdom[0], xdom[-1], ydom[0], ydom[-1])
 
-    # h = h2d.hist
-    # if normalize:
-    #     n = np.sum(h.ravel())
-    #     h = h/n
-    #     tiny = tiny/n
-    # if log:
-    #     zplt = np.log(h+tiny)
-    # else:
-    #     zplt = h
-    # zplt_min, zplt_max = min(zplt.ravel()), max(zplt.ravel())
-
 
     if normalize:
         tiny = tiny/np.sum(h2d.hist.ravel())
@@ -302,7 +291,7 @@ def plot_2D_hist(ax=None, h2d=None,
 def plot_PCA_2D_hist(X=None, pca=None, ax=None, 
                      h2d=None,
                      PCs=[1,2],
-                     justlimits=False,
+                     #justlimits=False,
                      levels=None,
                      numsig=3, numbin=60,
                      cmap='rocket', 
@@ -345,16 +334,6 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
     if h2d is None:
         h2d = pca.project_histo(data=X, PCs=PCs, numsig=numsig, numbin=numbin)
     
-
-    if justlimits:
-        lims = plot_2D_hist(
-            h2d=h2d,
-            justlimits=True,
-            log=log,
-            normalize=normalize,
-            tiny=tiny,
-        )
-        return lims
 
 
     ax, cb = plot_2D_hist(

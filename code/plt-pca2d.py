@@ -37,7 +37,7 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs='+', type=str, help='staged trial data json files')
-    parser.add_argument('-p', type=str, help='pca json')
+    parser.add_argument('-p', default=None, type=str, help='pca json')
     parser.add_argument('-s', default=None, type=str, help='scoreblock.json')
     parser.add_argument('--dest', default='ANL-plt-pca2d', help='output folder')
     args = parser.parse_args()
@@ -77,26 +77,50 @@ if __name__ == '__main__':
 
     # LOAD
     allTrialData = [rt.StagedTrialData.from_json(f, loadEDF=False) for f in args.f]
-    pca = rt.PCA.from_json(args.p)
+
+
+    list_of_h2d = []
+    # MUNGING
+
+    # compute 2D histograms
+    if args.p is not None:
+
+        # carry out PCA projections, make 2D histograms
+        pca = rt.PCA.from_json(args.p)
+
+        for std in allTrialData:
+            X = std.features.data
+            print('precomputing h2d for', std.tagDict)
+            h2d = pca.project_histo(
+                data=X,
+                PCs=pca_hist_kwa['PCs'],
+                numsig=pca_hist_kwa['numsig'],
+                numbin=pca_hist_kwa['numbin'],
+                )
+
+            tiny = 0.6
+            if pca_hist_kwa['normalize']:
+                tiny = tiny/np.sum(h2d.hist.ravel())
+                h2d = h2d.normalize()
+            if pca_hist_kwa['log']:
+                h2d = h2d.logscale(tiny=tiny)
+
+            list_of_h2d.append(h2d)
+
+    else:
+        # TODO: compute Histo2D directly from features
+        pass
+
 
     col1 = 'PC%i' % pca_hist_kwa['PCs'][0]
     col2 = 'PC%i' % pca_hist_kwa['PCs'][1]
 
-    # TODO: precompute Histo2D, h2d for each trial
-    # h2d = pca.project_histo(
-    #     data=X,
-    #     PCs=pca_hist_kwa['PCs'],
-    #     numsig=pca_hist_kwa['numsig'],
-    #     numbin=pca_hist_kwa['numbin'],
-    #     )
 
     # automatic range limits (inefficient, but convenient for multiple plots)
     if pca_hist_kwa.get('levels', None) in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
-        for std in allTrialData:
-            # TODO: use precomputed h2d here
-            X = std.features.data
-            lims = pt.plot_PCA_2D_hist(X=X, pca=pca, justlimits=True, **pca_hist_kwa)
+        for h2d in list_of_h2d:
+            lims = h2d.range
             cmin = min(cmin, lims[0])
             cmax = max(cmax, lims[1])
         if pca_hist_kwa['log'] == True:
@@ -122,25 +146,15 @@ if __name__ == '__main__':
         df_prj = pca.project(data=X, PCs=pca_hist_kwa['PCs'])
 
         # split data by scores
+        gotScores = False
         if args.s is not None:
             scores = sb.ScoreBlock.from_json(args.s).keeprows(conditions=[('trial',trial)])
-
-            ndx = scores.df['scorer'] == 'consensus'
-            data = scores.df[ndx][scores.data_cols].values.ravel()
-            # split features by score
-            features = df_prj[[col1, col2]].T
-            features.index.name = 'PC'
-            # seeing that this works for multi-index
-            features['trial'] = [trial]*2
-            features.set_index(['trial'], append=True, inplace=True)
-            split_data = rt.split_features_by_scores(features=features, scores=data)
             gotScores = True
-
         elif std.scoreblock is not None:
-            # TODO: get this the heck out of here 
-
             scores = std.scoreblock
+            gotScores = True
 
+        if gotScores:
             ndx = scores.df['scorer'] == 'consensus'
             data = scores.df[ndx][scores.data_cols].values.ravel()
             # split features by score
@@ -150,10 +164,10 @@ if __name__ == '__main__':
             features['trial'] = [trial]*2
             features.set_index(['trial'], append=True, inplace=True)
             split_data = rt.split_features_by_scores(features=features, scores=data)
-            gotScores = True
+            #gotScores = True
         else:
             print('NO SCORES TO OVERLAY ON PCA. SAD.')
-            gotScores = False
+            #gotScores = False
             split_data = None
 
 
