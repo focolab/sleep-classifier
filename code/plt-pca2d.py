@@ -102,12 +102,10 @@ if __name__ == '__main__':
                 numbin=pca_hist_kwa['numbin'],
                 )
 
-            tiny = 0.6
             if pca_hist_kwa['normalize']:
-                tiny = tiny/np.sum(h2d.hist.ravel())
                 h2d = h2d.normalize()
             if pca_hist_kwa['log']:
-                h2d = h2d.logscale(tiny=tiny)
+                h2d = h2d.logscale()
 
 
             # dataframe of xy data and scores
@@ -147,8 +145,6 @@ if __name__ == '__main__':
             cmin = min(cmin, lims[0])
             cmax = max(cmax, lims[1])
         if pca_hist_kwa['log'] == True:
-            cmin = np.floor(cmin)
-            cmax = np.ceil(cmax)
             levels = np.arange(cmin, cmax+1)
         else:
             levels = np.linspace(cmin, cmax, 7)

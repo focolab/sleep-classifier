@@ -428,51 +428,75 @@ class Histo2D(object):
     dims (list) : names of the dimensions
     tagDict (dict) : metadata tags (trial/genotype etc)
 
+    isLogScaled : bool
+    isNormalized : bool
+    tiny : fudge factor so that zero count bins can be log scaled
+
     TODO:
-        should have logscale/normalized attributes
-        should include tiny
         sigX/sigY attributes
 
     """
-    def __init__(self, dims=None, bin_edges=None, hist=None, tagDict={}):
+    def __init__(self, dims=None, bin_edges=None, hist=None,
+                tagDict={}, isLogScaled=False, isNormalized=False,
+                tiny=0.6):
 
         self.tagDict = tagDict
         self.dims = dims
         self.bin_edges = bin_edges
         self.hist = hist
 
-    def normalize(self):
+        self.isLogScaled = isLogScaled
+        self.isNormalized = isNormalized
+        self.tiny = tiny
 
-        h = self.hist/np.sum(self.hist.ravel())
+        self.varX = None
+        self.varY = None
+
+    def normalize(self):
+        """note, tiny also gets scaled"""
+        n = np.sum(self.hist.ravel())
+
         return Histo2D(
             tagDict=self.tagDict,
             dims=self.dims,
             bin_edges=self.bin_edges,
+            isLogScaled=self.isLogScaled,
+            isNormalized=True,
+            tiny=self.tiny/n,
+            hist=self.hist/n
+        )
+
+    def logscale(self):
+        """"""
+        if self.isLogScaled:
+            raise Exception('Hist2D is already log scaled')
+
+        h = np.log(self.hist+self.tiny)
+        return Histo2D(
+            tagDict=self.tagDict,
+            dims=self.dims,
+            bin_edges=self.bin_edges,
+            isLogScaled=True,
+            isNormalized=self.isNormalized,
+            tiny=self.tiny,
             hist=h
         )
 
-    def logscale(self, tiny=0.1):
-        """
-        tiny should be between zero and the smallest bin count
-        """
-        z = np.log(self.hist+tiny)
-        return Histo2D(
-            tagDict=self.tagDict,
-            dims=self.dims,
-            bin_edges=self.bin_edges,
-            hist=z
-        )
-
     @property
-    def range(self):
-        return [np.min(self.hist.ravel()), np.max(self.hist.ravel())]
-
-
+    def range(self, round_log=True):
+        hmin = np.min(self.hist.ravel())
+        hmax = np.max(self.hist.ravel())
+        if self.isLogScaled and round_log:
+            return [np.floor(hmin), np.ceil(hmax)]
+        else:
+            return [hmin, hmax]
 
     def about(self):
         print('------ Histo2D.about() ---------')
         print(self.tagDict)
         print(self.dims)
+        print('isLogScaled :', self.isLogScaled)
+        print('isNormalized:', self.isNormalized)
 
 
 
