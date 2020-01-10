@@ -76,6 +76,7 @@ if __name__ == '__main__':
 
     data = []
     if args.p is not None:
+        # staging data when we need to carry out PCA projection
 
         # make PCA projections, 2D histograms, xy-score dataframes
         pca = rt.PCA.from_json(args.p)
@@ -108,15 +109,53 @@ if __name__ == '__main__':
             df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
 
             # pack it up
-            dd = dict(
-                std=std,
-                h2d=h2d,
-                df_xys=df_xys
-            )
+            dd = dict(std=std, h2d=h2d, df_xys=df_xys)
             data.append(dd)
     else:
-        # TODO: compute h2d/df_xys by some other means
-        pass
+        # no PCA projection, just compute 2d histograms from two features
+        pca = None
+        for std in allTrialData:
+            X = std.features.data
+
+            if X.shape[0] != 2:
+                raise Exception('only works for exactly two features')
+
+            print('precomputing h2d for', std.tagDict)
+
+            xedg = np.linspace(-3, 3, 61)
+            yedg = np.linspace(-3, 3, 61)
+            hist, _ = np.histogramdd(X.T, bins=[xedg, yedg])
+
+            [xcol, ycol] = std.features.df['tag'].values
+
+            h2d = rt.Histo2D(
+                dims=[xcol, ycol],
+                bin_edges=[xedg, yedg],
+                hist=hist,
+                )
+
+            if pca_hist_kwa['normalize']:
+                h2d = h2d.normalize()
+            if pca_hist_kwa['log']:
+                h2d = h2d.logscale()
+
+
+            # dataframe of xy data and scores
+            df_xys = pd.DataFrame(data=X.T, columns=std.features.df['tag'])
+
+            # get scores
+            if args.s is not None:
+                scores = sb.ScoreBlock.from_json(args.s).keeprows(conditions=[('trial',trial)])
+            elif std.scoreblock is not None:
+                scores = std.scoreblock
+
+            ndx = scores.df['scorer'] == 'consensus'
+            df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
+
+            # pack it up
+            dd = dict(std=std, h2d=h2d, df_xys=df_xys)
+            data.append(dd)
+
 
 
     # determine range limits (consistency btwn multiple plots)
