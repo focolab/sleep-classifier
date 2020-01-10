@@ -190,42 +190,34 @@ def plot_features_template(df_feat_index=None, unique_scores=None,
 
 
 def plot_2D_hist(ax=None, h2d=None,
-                 justlimits=False,
                      levels=None,
                      cmap='rocket', 
                      log=True,
                      normalize=False,
-                     tiny=0.6,
                      ptype='contourf',
                      cbar=True
                      ):
     """plot a histogram of data projected onto a 2D basis
 
-    TODO: PCA FREE
+    TODO: tiny should also be part of h2d
+    TODO: deprecate log and normalize.. should be attributes of h2d
     NOTE: this is only the histogram (raw data not plotted here)
-    TODO: justlimits should be a method of h2d
 
     arguments:
     ------
     h2d: histo2D object
     ax: axes on which to plot
-    justlimits: compute histogram but only return the limits (for multiple plots)
     levels: contour levels (also sets the colorbar limits)
 
     cmap: colormap for contour/imshow
     log: log scale or not
     normalize: normalize?
-    tiny: tiny number added to bin counts (to avoid NaNs)
     ptype: (contourf or imshow) which type of plot to plot    
     """
-
-    gridkwa = dict(color='white', alpha=0.7)
-
 
     if h2d is None:
         raise Exception('h2d required')
     
-
     xlbl = h2d.dims[0]
     ylbl = h2d.dims[1]
     xdom = h2d.bin_edges[0]
@@ -235,17 +227,8 @@ def plot_2D_hist(ax=None, h2d=None,
     extent = (xdom[0], xdom[-1], ydom[0], ydom[-1])
 
 
-    if normalize:
-        tiny = tiny/np.sum(h2d.hist.ravel())
-        h2d = h2d.normalize()
-    if log:
-        h2d = h2d.logscale(tiny=tiny)
     zplt = h2d.hist
     [zplt_min, zplt_max] = h2d.range
-
-    # useful for consistent colorbars across multiple plots :)
-    if justlimits:
-        return [zplt_min, zplt_max]
 
     if isinstance(levels, (list, np.ndarray)):
         pass
@@ -254,20 +237,18 @@ def plot_2D_hist(ax=None, h2d=None,
         zplt_max = np.ceil(zplt_max)
         levels = np.linspace(zplt_min, zplt_max, 8)
 
-    # pdb.set_trace()
-
     # make a discretized colormap
     cmapx = plt.get_cmap(cmap)
     norm = BoundaryNorm(levels, ncolors=cmapx.N, clip=True)
 
-
+    # actual plotting
     pltkwa = dict(origin='lower', cmap=cmap, extent=extent)
     if ptype == 'contourf':
         im0 = ax.contourf(zplt.T, levels=levels, **pltkwa)
     elif ptype == 'imshow':
         im0 = ax.imshow(zplt.T, aspect='auto', norm=norm, **pltkwa)
 
-
+    # colorbar?
     if cbar == True:
         cb = plt.gcf().colorbar(im0, ax=ax, pad=0.01)
 
@@ -278,8 +259,7 @@ def plot_2D_hist(ax=None, h2d=None,
     else:
         cb = None
 
-
-    # limits and labels
+    # gussy it up
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_xlabel(xlbl)
@@ -291,7 +271,6 @@ def plot_2D_hist(ax=None, h2d=None,
 def plot_PCA_2D_hist(X=None, pca=None, ax=None, 
                      h2d=None,
                      PCs=[1,2],
-                     #justlimits=False,
                      levels=None,
                      numsig=3, numbin=60,
                      cmap='rocket', 
@@ -305,7 +284,6 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
 
     NOTE: this is only the histogram (raw data not plotted here)
     TODO: disentangle 2D histo from PCA specifics. WWRW is general 2D plotter
-
 
     arguments:
     ------
@@ -327,19 +305,16 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
     ptype: (contourf or imshow) which type of plot to plot    
     """
 
-    gridkwa = dict(color='white', alpha=0.7)
-
+    raise Exception('deprecated')
 
     # all in one go
     if h2d is None:
         h2d = pca.project_histo(data=X, PCs=PCs, numsig=numsig, numbin=numbin)
     
 
-
     ax, cb = plot_2D_hist(
         ax=ax, 
         h2d=h2d,
-        justlimits=False,
         levels=levels,
         cmap=cmap, 
         log=log,
@@ -349,12 +324,19 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
         cbar=cbar,     
     )
 
-
     # gussy it up (PCA SPECIFIC)
     sigX = np.sqrt(pca.vals[PCs[0]-1])
     sigY = np.sqrt(pca.vals[PCs[1]-1])
 
-    # crosshairs, with ticks every 1 sigma
+    plot_pca_crosshair(ax=ax, sigX=sigX, sigY=sigY)
+
+    return ax, cb
+
+
+def plot_pca_crosshair(ax=None, sigX=1, sigY=1):
+    """crosshairs, with ticks"""
+    gridkwa = dict(color='white', alpha=0.7)
+
     ticksig = [1, 2]
     for tt in ticksig:
         xx, yy = sigX*tt, sigY*tt
@@ -365,8 +347,6 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
         if tt == max(*ticksig):
             ax.plot([-xx, xx], [0, 0], '-', **gridkwa)
             ax.plot([0, 0], [-yy, yy], '-', **gridkwa)
-
-    return ax, cb
 
 
 def montage_raster(df_index=None, data=None, cmap='rocket', aspect=200,

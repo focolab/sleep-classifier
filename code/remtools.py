@@ -428,6 +428,11 @@ class Histo2D(object):
     dims (list) : names of the dimensions
     tagDict (dict) : metadata tags (trial/genotype etc)
 
+    TODO:
+        should have logscale/normalized attributes
+        should include tiny
+        sigX/sigY attributes
+
     """
     def __init__(self, dims=None, bin_edges=None, hist=None, tagDict={}):
 
