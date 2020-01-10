@@ -189,30 +189,20 @@ def plot_features_template(df_feat_index=None, unique_scores=None,
     return fig, ax, channel_info
 
 
-def plot_2D_hist(ax=None, h2d=None,
-                     levels=None,
-                     cmap='rocket', 
-                     log=True,
-                     normalize=False,
-                     ptype='contourf',
-                     cbar=True
-                     ):
+def plot_2D_hist(ax=None, h2d=None, levels=None,
+                 cmap='rocket', ptype='contourf', cbar=True):
     """plot a histogram of data projected onto a 2D basis
 
-    TODO: tiny should also be part of h2d
-    TODO: deprecate log and normalize.. should be attributes of h2d
     NOTE: this is only the histogram (raw data not plotted here)
+    TODO: method of Histo2D?
 
     arguments:
     ------
-    h2d: histo2D object
+    h2d: Histo2D object
     ax: axes on which to plot
     levels: contour levels (also sets the colorbar limits)
-
     cmap: colormap for contour/imshow
-    log: log scale or not
-    normalize: normalize?
-    ptype: (contourf or imshow) which type of plot to plot    
+    ptype: (contourf or imshow) which type of plot to plot
     """
 
     if h2d is None:
@@ -252,10 +242,15 @@ def plot_2D_hist(ax=None, h2d=None,
     if cbar == True:
         cb = plt.gcf().colorbar(im0, ax=ax, pad=0.01)
 
-        if normalize:
-            cb.ax.set_ylabel('log(p)')
+        if h2d.isNormalized:
+            cb_ylbl = 'p'
         else:
-            cb.ax.set_ylabel('log(N)')
+            cb_ylbl = 'N'
+        if h2d.isLogScaled:
+            cb.ax.set_ylabel('log(%s)' % (cb_ylbl))
+        else:
+            cb.ax.set_ylabel(cb_ylbl)
+
     else:
         cb = None
 

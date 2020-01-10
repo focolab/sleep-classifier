@@ -24,6 +24,7 @@ import os
 import json
 import datetime
 import time
+import copy
 
 import pandas as pd
 import numpy as np
@@ -339,13 +340,19 @@ class PCA(object):
         # ND histogram
         hist, _ = np.histogramdd(df_prj.values, bins=bin_edges)
 
+        # variances
+        sigX = np.sqrt(self.vals[PCs[0]-1])
+        sigY = np.sqrt(self.vals[PCs[1]-1])
+
 
         # PCHisto class
         pch = Histo2D(
             dims=df_prj.columns.tolist(), 
             bin_edges=bin_edges, 
             hist=hist, 
-            tagDict=tagDict, 
+            tagDict=tagDict,
+            varX=sigX,
+            varY=sigY,
             )
 
         return pch
@@ -432,13 +439,12 @@ class Histo2D(object):
     isNormalized : bool
     tiny : fudge factor so that zero count bins can be log scaled
 
-    TODO:
-        sigX/sigY attributes
+    varX(Y) : variance on each axis (useful for PCA)
 
     """
     def __init__(self, dims=None, bin_edges=None, hist=None,
                 tagDict={}, isLogScaled=False, isNormalized=False,
-                tiny=0.6):
+                tiny=0.6, varX=None, varY=None):
 
         self.tagDict = tagDict
         self.dims = dims
@@ -449,8 +455,8 @@ class Histo2D(object):
         self.isNormalized = isNormalized
         self.tiny = tiny
 
-        self.varX = None
-        self.varY = None
+        self.varX = varX
+        self.varY = varY
 
     def normalize(self):
         """note, tiny also gets scaled"""
@@ -463,13 +469,15 @@ class Histo2D(object):
             isLogScaled=self.isLogScaled,
             isNormalized=True,
             tiny=self.tiny/n,
-            hist=self.hist/n
+            hist=self.hist/n,
+            varX=self.varX,
+            varY=self.varY,
         )
 
     def logscale(self):
         """"""
         if self.isLogScaled:
-            raise Exception('Hist2D is already log scaled')
+            raise Exception('Histo2D is already log scaled')
 
         h = np.log(self.hist+self.tiny)
         return Histo2D(
@@ -479,8 +487,14 @@ class Histo2D(object):
             isLogScaled=True,
             isNormalized=self.isNormalized,
             tiny=self.tiny,
-            hist=h
+            hist=h,
+            varX=self.varX,
+            varY=self.varY,
         )
+
+    def __deepcopy__(self, memo):
+        #print '__deepcopy__(%s)' % str(memo)
+        return Histo2D(copy.deepcopy(self.name, memo))
 
     @property
     def range(self, round_log=True):
@@ -493,11 +507,14 @@ class Histo2D(object):
 
     def about(self):
         print('------ Histo2D.about() ---------')
-        print(self.tagDict)
-        print(self.dims)
+        print('tagDict     :')
+        for k,v in self.tagDict.items():
+            print('  %s:' % k, v)
+        print('dims        :', self.dims)
         print('isLogScaled :', self.isLogScaled)
         print('isNormalized:', self.isNormalized)
-
+        print('varX        :', self.varX)
+        print('varY        :', self.varY)
 
 
 class Spectrogram(object):

@@ -4,7 +4,6 @@ import os
 import argparse
 import json
 import pdb
-#import pickle
 import datetime
 
 import pandas as pd
@@ -31,7 +30,6 @@ if __name__ == '__main__':
     plotting feature data projected into PC space
 
 
-    TODO: load scores
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs='+', type=str, help='staged trial data json files')
@@ -83,8 +81,8 @@ if __name__ == '__main__':
     #   std
     #   h2d
     #   df_xys
+    # global:
     #   levels
-    # TODO: sigx and sigy should be packed into h2d?
     #
 
     data = []
@@ -92,6 +90,7 @@ if __name__ == '__main__':
 
         # make PCA projections, 2D histograms, xy-score dataframes
         pca = rt.PCA.from_json(args.p)
+
         for std in allTrialData:
             X = std.features.data
             print('precomputing h2d for', std.tagDict)
@@ -107,11 +106,10 @@ if __name__ == '__main__':
             if pca_hist_kwa['log']:
                 h2d = h2d.logscale()
 
-
             # dataframe of xy data and scores
             df_xys = pca.project(data=X, PCs=pca_hist_kwa['PCs'])
 
-            # split data by scores
+            # get scores
             if args.s is not None:
                 scores = sb.ScoreBlock.from_json(args.s).keeprows(conditions=[('trial',trial)])
             elif std.scoreblock is not None:
@@ -132,11 +130,7 @@ if __name__ == '__main__':
         pass
 
 
-    col1 = 'PC%i' % pca_hist_kwa['PCs'][0]
-    col2 = 'PC%i' % pca_hist_kwa['PCs'][1]
-
-
-    # automatic range limits (inefficient, but convenient for multiple plots)
+    # determine range limits (consistency btwn multiple plots)
     if pca_hist_kwa.get('levels', None) in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
         for dd in data:
@@ -177,16 +171,18 @@ if __name__ == '__main__':
         for i, label in enumerate(labels):
 
             dfi = df_xys[df_xys['scores'] == label]
+            colx, coly = dfi.columns[:2]
+
             frac = 100.0*len(dfi)/len(df_xys)
             ntag = 'N=%i  (%2.1f %%)' % (len(dfi), frac)
+
             pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=pca_hist_kwa['cmap'], levels=levels)
 
             # gussy it up (PCA SPECIFIC)
-            sigX = np.sqrt(pca.vals[pca_hist_kwa['PCs'][0]-1])
-            sigY = np.sqrt(pca.vals[pca_hist_kwa['PCs'][1]-1])
-            pt.plot_pca_crosshair(ax=ax[i], sigX=sigX, sigY=sigY)
+            if pca is not None:
+                pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
 
-            ax[i].plot(dfi[col1], dfi[col2], **point_kwa)
+            ax[i].plot(dfi[colx], dfi[coly], **point_kwa)
 
             ax[i].text(0.02, 0.98, label, ha='left', va='top', transform = ax[i].transAxes, **text_kwa)
             ax[i].text(0.98, 0.98, ntag, ha='right', va='top', transform = ax[i].transAxes, **text_kwa)
@@ -210,8 +206,7 @@ if __name__ == '__main__':
 
         #-------------------
         # score-wise mean/cov blobs on top of projected distributions
-        nrow = 2
-        ncol = 1
+        nrow, ncol = 2, 1
         fig = plt.figure(figsize=(6, 8))
         ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
 
@@ -219,10 +214,9 @@ if __name__ == '__main__':
         pt.plot_2D_hist(h2d=h2d, ax=ax[1], ptype='imshow', cmap=pca_hist_kwa['cmap'], levels=levels)
 
         # gussy it up (PCA SPECIFIC)
-        sigX = np.sqrt(pca.vals[pca_hist_kwa['PCs'][0]-1])
-        sigY = np.sqrt(pca.vals[pca_hist_kwa['PCs'][1]-1])
-        pt.plot_pca_crosshair(ax=ax[0], sigX=sigX, sigY=sigY)
-        pt.plot_pca_crosshair(ax=ax[1], sigX=sigX, sigY=sigY)
+        if pca is not None:
+            pt.plot_pca_crosshair(ax=ax[0], sigX=h2d.varX, sigY=h2d.varY)
+            pt.plot_pca_crosshair(ax=ax[1], sigX=h2d.varX, sigY=h2d.varY)
 
         # LEGEND
         labels_colors = zip(labels, colors)
@@ -234,7 +228,8 @@ if __name__ == '__main__':
             # use PCA machinery to create 2sigma ellipses
             try:
                 dfi = df_xys[df_xys['scores'] == label]
-                pcai = rt.PCA.from_data(dfi[[col1, col2]].values.T)
+                colx, coly = dfi.columns[:2]
+                pcai = rt.PCA.from_data(dfi[[colx, coly]].values.T)
 
                 # plot mean and 2sigma ellipse
                 kwa = dict(color=colors[i])
