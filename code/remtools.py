@@ -459,45 +459,29 @@ class Histo2D(object):
         self.varY = varY
 
     def normalize(self):
-        """note, tiny also gets scaled"""
-        n = np.sum(self.hist.ravel())
+        """return deep copy with normalized histogram
 
-        return Histo2D(
-            tagDict=self.tagDict,
-            dims=self.dims,
-            bin_edges=self.bin_edges,
-            isLogScaled=self.isLogScaled,
-            isNormalized=True,
-            tiny=self.tiny/n,
-            hist=self.hist/n,
-            varX=self.varX,
-            varY=self.varY,
-        )
+        note: tiny also gets scaled
+        """
+        dc = copy.deepcopy(self)
+        n = np.sum(self.hist.ravel())
+        dc.tiny = self.tiny/n
+        dc.hist = self.hist/n
+        return dc
 
     def logscale(self):
-        """"""
+        """return deep copy with log scaled histogram"""
         if self.isLogScaled:
-            raise Exception('Histo2D is already log scaled')
-
-        h = np.log(self.hist+self.tiny)
-        return Histo2D(
-            tagDict=self.tagDict,
-            dims=self.dims,
-            bin_edges=self.bin_edges,
-            isLogScaled=True,
-            isNormalized=self.isNormalized,
-            tiny=self.tiny,
-            hist=h,
-            varX=self.varX,
-            varY=self.varY,
-        )
-
-    def __deepcopy__(self, memo):
-        #print '__deepcopy__(%s)' % str(memo)
-        return Histo2D(copy.deepcopy(self.name, memo))
+            print('WARNIGN: Histo2D is already log scaled')
+            return self
+        dc = copy.deepcopy(self)
+        dc.hist = np.log(self.hist+self.tiny)
+        dc.isLogScaled = True
+        return dc
 
     @property
     def range(self, round_log=True):
+        """bin min/max"""
         hmin = np.min(self.hist.ravel())
         hmax = np.max(self.hist.ravel())
         if self.isLogScaled and round_log:
