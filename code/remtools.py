@@ -467,6 +467,7 @@ class Histo2D(object):
         n = np.sum(self.hist.ravel())
         dc.tiny = self.tiny/n
         dc.hist = self.hist/n
+        dc.isNormalized = True
         return dc
 
     def logscale(self):
