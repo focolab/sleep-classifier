@@ -29,7 +29,6 @@ if __name__ == '__main__':
     """
     plotting feature data projected into PC space
 
-
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs='+', type=str, help='staged trial data json files')
@@ -47,43 +46,33 @@ if __name__ == '__main__':
     print('plt-pca-2d.py: scoreblock merging/munging should be done beforehand')
 
 
-
+    levels = 'auto'
     labels = ['REM', 'Non REM', 'Wake', 'XXX']
+    cmap = 'Greys_r' #'rocket'
 
-    pca_hist_kwa = dict(
-        PCs=[1, 2],
-        numsig=3,
-        numbin=60,
-        cmap='Greys_r',
-        #cmap='rocket',
-        log=True,
-        normalize=True,
-        levels='auto',
-    )
+    # munge params
+    pca_hist_kwa = dict(PCs=[1, 2], numsig=3, numbin=60, log=True, normalize=True, levels='auto')
 
+    # plot params
     text_kwa = dict(color='white', fontsize=10)
-    ellipse_kwa = dict(zorder=1, alpha=1, lw=3, fill=False)
-    mu_kwa = dict(marker='o', mec='k')
-    legend_line_kwa = dict(mec='none', marker='s', ms=12, lw=0)
-    legend_kwa = dict(fontsize=10, framealpha=0, frameon=False)
+
+    # scatter specific params
     point_kwa = dict(lw=0, marker='o', ms=2, mec='none', color='magenta', alpha=1)
 
+    # ellipse overlay specific params
+    ellipse_kwa = dict(zorder=1, alpha=1, lw=3, fill=False)
+    mu_kwa = dict(marker='o', mec='k')
+    legend_kwa = dict(fontsize=10, framealpha=0, frameon=False)
+    legend_line_kwa = dict(mec='none', marker='s', ms=12, lw=0)
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
     # LOAD
     allTrialData = [rt.StagedTrialData.from_json(f, loadEDF=False) for f in args.f]
 
-
     #-------------------------------------
     # MUNGING
-    # for each trial:
-    #   std
-    #   h2d
-    #   df_xys
-    # global:
-    #   levels
-    #
+    # for each trial: std, h2d, df_xys
 
     data = []
     if args.p is not None:
@@ -126,16 +115,15 @@ if __name__ == '__main__':
             )
             data.append(dd)
     else:
-        # TODO: compute Histo2D directly from features
+        # TODO: compute h2d/df_xys by some other means
         pass
 
 
     # determine range limits (consistency btwn multiple plots)
-    if pca_hist_kwa.get('levels', None) in ['auto', None]:
+    if levels in ['auto', None]:
         cmin, cmax = np.inf, -np.inf
         for dd in data:
-            h2d = dd['h2d']
-            lims = h2d.range
+            lims = dd['h2d'].range
             cmin = min(cmin, lims[0])
             cmax = max(cmax, lims[1])
         if pca_hist_kwa['log'] == True:
@@ -143,13 +131,21 @@ if __name__ == '__main__':
         else:
             levels = np.linspace(cmin, cmax, 7)
 
-        pca_hist_kwa['levels'] = levels
 
 
 
     #-------------------------------------
     # MAIN: plot each trial
     for dd in data:
+
+        # for each trial we need
+        #   std/h2d/df_xys
+        #
+        #   labels
+        #   cmap
+        #   levels
+        #   kwa..
+        #
 
         std = dd['std']
         h2d = dd['h2d']
@@ -161,6 +157,7 @@ if __name__ == '__main__':
         print('plotting: %s' % (tag))
 
 
+
         #-------------------
         # score-wise RAW DATA on top of projected distribution
         nrow = len(labels)
@@ -169,14 +166,13 @@ if __name__ == '__main__':
         ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
 
         for i, label in enumerate(labels):
-
             dfi = df_xys[df_xys['scores'] == label]
             colx, coly = dfi.columns[:2]
 
             frac = 100.0*len(dfi)/len(df_xys)
             ntag = 'N=%i  (%2.1f %%)' % (len(dfi), frac)
 
-            pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=pca_hist_kwa['cmap'], levels=levels)
+            pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=cmap, levels=levels)
 
             # gussy it up (PCA SPECIFIC)
             if pca is not None:
@@ -210,8 +206,8 @@ if __name__ == '__main__':
         fig = plt.figure(figsize=(6, 8))
         ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
 
-        pt.plot_2D_hist(h2d=h2d, ax=ax[0], ptype='imshow', cmap=pca_hist_kwa['cmap'], levels=levels)
-        pt.plot_2D_hist(h2d=h2d, ax=ax[1], ptype='imshow', cmap=pca_hist_kwa['cmap'], levels=levels)
+        pt.plot_2D_hist(h2d=h2d, ax=ax[0], ptype='imshow', cmap=cmap, levels=levels)
+        pt.plot_2D_hist(h2d=h2d, ax=ax[1], ptype='imshow', cmap=cmap, levels=levels)
 
         # gussy it up (PCA SPECIFIC)
         if pca is not None:
