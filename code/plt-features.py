@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+TODO:
+    - should be focused to plotting the power spectrum? (w light processing)
+    - factor plots into functions
+"""
+
 import os
 import argparse
 import json
@@ -25,96 +31,6 @@ import scoreblock as sb
 
 sns.set(color_codes=True)
 sns.set_style('ticks')
-
-# def plot_features_template(df_feat_index=None, unique_scores=None, xpad=2, boxkwa=None):
-#     """template for plotting state-specific features
-
-#     df_feat_index should have columns 'channel' and 'f[Hz]'
-#     """
-
-#     make_features_integers = True
-
-#     if boxkwa is None:
-#         boxkwa = dict(ec='none', fc='gray', alpha=0.2)
-
-#     #df_ndx = df_feat.index.to_frame().reset_index(drop=True)
-
-#     df_ndx = df_feat_index
-#     channel_col = 'channel'
-
-#     # set up the x-axis indexing, ticks, and grey boxes for each channel
-#     # requires: channels, df_ndx, xpad
-
-#     channels = df_ndx[channel_col].unique()
-
-#     xtk, xtkl, channel_info = [], [], []
-#     for ic, channel in enumerate(channels):
-#         # data indices (ndx) and plotting (x-axis) indices
-#         ndx = np.argwhere(df_ndx[channel_col].values==channel).T[0]
-#         xndx = ndx+xpad*ic
-
-#         # build a rectangle to sit below y=0
-#         left, width = xndx[0], len(ndx)-1
-#         bottom, height = -0.05, 0.05
-#         right = left + width
-#         top = bottom + height
-
-#         # boxcoords are set up for patches.Rectangle()
-#         boxcoords = [(left, bottom), width, height]
-
-#         # pack it up
-#         dd = dict(name=channel, xndx=xndx, ndx=ndx, boxcoords=boxcoords)
-#         channel_info.append(dd)
-
-#         # ticks and ticklabels
-#         mid = len(ndx)//2
-#         ticks = [xndx[0], xndx[mid], xndx[-1]]
-#         ticklabels = df_ndx['f[Hz]'].values[[ndx[0], ndx[mid], ndx[-1]]]
-#         if make_features_integers:
-#             ticklabels = ticklabels.astype(int)
-#         xtk += ticks
-#         xtkl += ticklabels.tolist()
-
-
-#     fig = plt.figure(figsize=(8,8))
-#     nrow = len(unique_scores)
-#     ncol = 1
-#     ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
-
-
-#     # the main loop enumerates sleep states (panel rows)
-#     for i, ss in enumerate(unique_scores):
-#         # one channel at a time (panel columns)
-#         for dd in channel_info:
-
-#             # grey boxes
-#             ax[i].add_patch(patches.Rectangle(*dd['boxcoords'], **boxkwa))
-
-#             # channel name label
-#             xctr = np.mean(dd['xndx'])
-#             ax[i].text(xctr, -0.025, dd['name'], va='center', ha='center', fontsize=8)
-
-#             # pseudo x-axis (only for bottom-most row)
-#             if i+1==len(ax):
-#                 ax[i].plot(dd['xndx'], dd['ndx']*0-0.05, lw=2, color='k', zorder=3)
-
-
-#         #ax[i].set_ylim([-0.05, 0.4])    # can be overwritten later
-#         ax[i].set_ylabel(ss)
-#         ax[i].spines['top'].set_visible(False)
-#         ax[i].spines['right'].set_visible(False)            
-#         ax[i].spines['bottom'].set_visible(False)
-
-#         # ticks
-#         if i+1<len(ax):
-#             ax[i].set_xticklabels([])
-#             ax[i].set_xticks([])
-#         else:
-#             ax[i].set_xticks(xtk)
-#             ax[i].set_xticklabels(xtkl, rotation='vertical')
-#             ax[i].set_xlabel('f [Hz]')
-
-#     return fig, ax, channel_info
 
 
 
@@ -179,7 +95,7 @@ def plot_features(df_feat=None, df_scores=None):
 
 
     # make the badass template
-    fig, ax, channel_info = plot_features_template(
+    fig, ax, channel_info = pt.plot_features_template(
         df_feat_index=df_ndx, 
         unique_scores=unique_scores,
         xpad=xpad
@@ -261,7 +177,7 @@ if __name__ == '__main__':
         ('EMG', [100., 102., 104.], 'EMG-[100,104]'),
     ]
 
-    # power bins    
+    # power bins
     xdom = np.linspace(0, 0.8, 161)
     bin_L = xdom[:-1]
     bin_R = xdom[1:]
@@ -298,6 +214,10 @@ if __name__ == '__main__':
 
     df_block_power = pd.concat(block_pwr_data, axis=0)
 
+
+
+
+    #=========================================================
     fig = plt.figure(figsize=(12,4))
     nrow = 1
     ncol = len(blocks)
@@ -348,25 +268,24 @@ if __name__ == '__main__':
 
     # PLOTTING
     for std in allTrialData:
-        raise Exception('use std.features instead of sxxb_prep')
-        df_feat = std.sxxb_prep.to_dataframe()
+        #raise Exception('use std.features instead of sxxb_prep')
+        #df_feat = std.sxxb_prep.to_dataframe()
+        df_feat = std.features.dfmi
 
 
         # plot feature vectors for each trial, split by sleep state
-        try:
-            sb_scores = std.sw.scoreblock
-            sb_scores.about()
-            df_scores = sb_scores.df.copy().set_index(sb_scores.index_cols)
-            dfs = df_scores[df_scores.index.get_level_values('scorer') == 'consensus']
+        sb_scores = std.scoreblock
+        sb_scores.about()
+        df_scores = sb_scores.df.copy().set_index(sb_scores.index_cols)
+        dfs = df_scores[df_scores.index.get_level_values('scorer') == 'consensus']
 
-            fig, ax = plot_features(df_feat=df_feat, df_scores=dfs)
-            txt = datetime.datetime.now().replace(microsecond=0).isoformat()
-            fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
-            ax[0].set_title('trial %s' % (str(std.trial)))
-    #        fig.suptitle('trial %s' % (str(std.trial)))
-            plt.savefig(os.path.join(args.dest, 'plot-features-trial-%s.png' % str(std.trial)), dpi=300)
-        except:
-            pass
+        fig, ax = plot_features(df_feat=df_feat, df_scores=dfs)
+        txt = datetime.datetime.now().replace(microsecond=0).isoformat()
+        fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
+        ax[0].set_title('trial %s' % (str(std.trial)))
+#        fig.suptitle('trial %s' % (str(std.trial)))
+        plt.savefig(os.path.join(args.dest, 'plot-features-trial-%s.png' % str(std.trial)), dpi=300)
+
 
 
         # plot feature POWER for each trial, NOT split by sleep state
