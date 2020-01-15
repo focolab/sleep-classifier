@@ -83,6 +83,7 @@ if __name__ == '__main__':
 
         for std in allTrialData:
             X = std.features.data
+            trial = std.tagDict['trial']
             print('precomputing h2d for', std.tagDict)
             h2d = pca.project_histo(
                 data=X,
@@ -116,6 +117,7 @@ if __name__ == '__main__':
         pca = None
         for std in allTrialData:
             X = std.features.data
+            trial = std.tagDict['trial']
 
             if X.shape[0] != 2:
                 raise Exception('only works for exactly two features')
@@ -145,6 +147,7 @@ if __name__ == '__main__':
 
             # get scores
             if args.s is not None:
+                #pdb.set_trace()
                 scores = sb.ScoreBlock.from_json(args.s).keeprows(conditions=[('trial',trial)])
             elif std.scoreblock is not None:
                 scores = std.scoreblock
