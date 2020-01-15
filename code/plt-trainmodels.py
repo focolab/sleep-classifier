@@ -102,8 +102,8 @@ if __name__ == '__main__':
     print('           plt-trainmodels.py')
     print('#=================================================================')
 
-    #classifier_names = ['LDA', 'QDA', 'OVO', 'OVR']
-    classifier_names = ['OVO', 'OVR']
+    classifier_names = ['LDA', 'QDA', 'OVO', 'OVR']
+    #classifier_names = ['OVO', 'OVR']
     colors = ['m', 'r', 'g', 'b']
 
     print('#=================================================================')
@@ -296,10 +296,20 @@ if __name__ == '__main__':
         fig = plt.figure(figsize=(6, 3), dpi=300)
         ax = [plt.subplot(121), plt.subplot(122)]
 
+        show_trial_labels = True
+        trialnames = df_acc.index.values[:-1]
+
         #== panel 0: accuracy
         ax[0].plot(df_acc.loc['Avg'], 'o', mec='k',  color='b', ms=12)
         for i, col in enumerate(classifier_names):
             ax[0].plot([i]*(len(df_acc)-1), df_acc[col][:-1], 'o', mec='k', color='gray', ms=8)
+
+            if show_trial_labels:
+                xx = [i]*(len(df_acc)-1)
+                yy = df_acc[col][:-1].values
+                for x,y,t in zip(xx, yy, trialnames):
+                    ax[0].text(x+0.2, y, t, fontsize=8)
+
 
         ax[0].set_title('accuracy')
         ax[0].set_ylim([0.85, 1.])
@@ -309,6 +319,13 @@ if __name__ == '__main__':
         ax[1].plot(df_lacc.loc['Avg'], 'o', mec='k', color='b', ms=12)    
         for i, col in enumerate(classifier_names):
             ax[1].plot([i]*(len(df_acc)-1), df_lacc[col][:-1], 'o', mec='k', color='gray', ms=8)
+
+            if show_trial_labels:
+                xx = [i]*(len(df_acc)-1)
+                yy = df_lacc[col][:-1].values
+                for x,y,t in zip(xx, yy, trialnames):
+                    ax[1].text(x+0.2, y, t, fontsize=8)
+
         ax[1].set_title('REM label accuracy')
         ax[1].set_ylim([0.0, 1.])
         ax[1].grid()
