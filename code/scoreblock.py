@@ -97,6 +97,11 @@ class ScoreBlock(object):
         return self.df[self.index_cols].copy()
 
     @property
+    def dfmi(self):
+        """return a mutli-index dataframe"""
+        return self.df.set_index(self.index_cols)
+
+    @property
     def uniqueScores(self):
         return np.unique(self.data).tolist()
 
