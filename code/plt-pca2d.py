@@ -124,8 +124,8 @@ if __name__ == '__main__':
 
             print('precomputing h2d for', std.tagDict)
 
-            xedg = np.linspace(-3, 3, 61)
-            yedg = np.linspace(-3, 3, 61)
+            xedg = np.linspace(-2.5, 2.5, 61)
+            yedg = np.linspace(-2.5, 2.5, 61)
             hist, _ = np.histogramdd(X.T, bins=[xedg, yedg])
 
             [xcol, ycol] = std.features.df['tag'].values
@@ -134,6 +134,8 @@ if __name__ == '__main__':
                 dims=[xcol, ycol],
                 bin_edges=[xedg, yedg],
                 hist=hist,
+                varX=1,
+                varY=1,
                 )
 
             if pca_hist_kwa['normalize']:
@@ -217,8 +219,8 @@ if __name__ == '__main__':
             pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=cmap, levels=levels)
 
             # gussy it up (PCA SPECIFIC)
-            if pca is not None:
-                pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
+            #if pca is not None:
+            pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
 
             ax[i].plot(dfi[colx], dfi[coly], **point_kwa)
 
@@ -252,9 +254,9 @@ if __name__ == '__main__':
         pt.plot_2D_hist(h2d=h2d, ax=ax[1], ptype='imshow', cmap=cmap, levels=levels)
 
         # gussy it up (PCA SPECIFIC)
-        if pca is not None:
-            pt.plot_pca_crosshair(ax=ax[0], sigX=h2d.varX, sigY=h2d.varY)
-            pt.plot_pca_crosshair(ax=ax[1], sigX=h2d.varX, sigY=h2d.varY)
+        #if pca is not None:
+        pt.plot_pca_crosshair(ax=ax[0], sigX=h2d.varX, sigY=h2d.varY)
+        pt.plot_pca_crosshair(ax=ax[1], sigX=h2d.varX, sigY=h2d.varY)
 
         # LEGEND
         labels_colors = zip(labels, colors)
@@ -299,3 +301,55 @@ if __name__ == '__main__':
 
 
 
+
+    #-------------------------------------
+    # MAIN: plot ALL trials side by side, one big montage
+    ncol = len(data)
+    nrow = 1
+    fig = plt.figure(figsize=(3.5*ncol, 4))
+    ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
+
+    # sort by GT
+    dff = pd.DataFrame([dd['std'].tagDict for dd in data])
+    #dff['frq'] = [dd['std'].edfMetaData.get('EMG_freq', -1.0) for dd in data] 
+    dff['ndx'] = range(len(dff))
+    #dfs = dff.sort_values(by=['genotype', 'frq', 'trial'])
+    dfs = dff.sort_values(by=['genotype', 'trial'])
+
+    print(dfs)
+
+    for i, ii in enumerate(dfs['ndx'].values):
+
+        dd = data[ii]
+        std = dd['std']
+        h2d = dd['h2d']
+
+        trial = std.tagDict.get('trial', 'tt')
+        gt = std.tagDict.get('genotype', 'gt')
+        tag = 'GT-%s-trial-%s' % (str(gt), str(trial))
+        print('plotting: %s' % (tag))
+
+        pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=cmap, levels=levels, cbar=False)
+        pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
+
+        ax[i].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+
+        txt = '%i Hz' % int(frq)
+        ax[i].text(0.01, 0.01, txt, ha='left', va='top', fontsize=20)
+
+
+        # gussy it up
+        if i>0:
+            ax[i].set_yticks([])
+            ax[i].set_yticklabels([])
+            ax[i].set_ylabel(None)
+
+
+    txt = datetime.datetime.now().replace(microsecond=0).isoformat()
+    fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
+
+
+    plt.tight_layout(w_pad=0)
+    plt.savefig(os.path.join(args.dest, 'plt-2D-PCA-histogram-scores-%s.png') % ('ALL'))
+    plt.savefig(os.path.join(args.dest, 'plt-2D-PCA-histogram-scores-%s.svg') % ('ALL'))
+    plt.close()
