@@ -428,10 +428,11 @@ class EEGPlotter(object):
         pca_hist_kwa = dict(
             numsig=3,
             numbin=60,
+        )
+
+        plt_hist_kwa = dict(
             cmap='Greys_r',
-            log=True,
             levels='auto',
-            normalize=True,
             ptype='imshow',
         )
 
@@ -442,17 +443,22 @@ class EEGPlotter(object):
 
         # pre-compute histograms and stash them
         if 'h2d_32' not in self.stash.keys():
-            self.stash['h2d_32'] = self.pca.project_histo(self.X, PCs=[3,2], numsig=3)
+            h2d = self.pca.project_histo(self.X, PCs=[3,2], **pca_hist_kwa).normalize().logscale()
+            self.stash['h2d_32'] = h2d
 
         if 'h2d_12' not in self.stash.keys():
-            self.stash['h2d_12'] = self.pca.project_histo(self.X, PCs=[1,2], numsig=3)
+            h2d = self.pca.project_histo(self.X, PCs=[1,2], **pca_hist_kwa).normalize().logscale()
+            self.stash['h2d_12'] = h2d
 
         h2d_32 = self.stash['h2d_32']
         h2d_12 = self.stash['h2d_12']
 
         t55 = time.time()
 
-        pt.plot_PCA_2D_hist(X=self.X, h2d=h2d_32, pca=self.pca, PCs=[3,2], ax=axx[2], **pca_hist_kwa, cbar=False)
+        #pt.plot_PCA_2D_hist(X=self.X, h2d=h2d_32, pca=self.pca, PCs=[3,2], ax=axx[2], **pca_hist_kwa, cbar=False)
+        pt.plot_2D_hist(h2d=h2d_32, ax=axx[2], **plt_hist_kwa, cbar=False)
+        pt.plot_pca_crosshair(ax=axx[2], sigX=h2d_32.varX, sigY=h2d_32.varY)
+
         # axx[2].plot(dfmerge['PC3'][ia:ib], dfmerge['PC2'][ia:ib], **line_kwa)
         # axx[2].plot(dfmerge['PC3'][ia:ib], dfmerge['PC2'][ia:ib], **line_kwa_inner)
         axx[2].plot(dfmerge['PC3'][ie-tail_length:ie], dfmerge['PC2'][ie-tail_length:ie], **line_kwa)
@@ -466,7 +472,9 @@ class EEGPlotter(object):
         axx[2].spines['bottom'].set_visible(False)
         axx[2].spines['left'].set_visible(False)
 
-        pt.plot_PCA_2D_hist(X=self.X, h2d=h2d_12, pca=self.pca, PCs=[1,2], ax=axx[3], **pca_hist_kwa, cbar=True)
+        #pt.plot_PCA_2D_hist(X=self.X, h2d=h2d_12, pca=self.pca, PCs=[1,2], ax=axx[3], **pca_hist_kwa, cbar=True)
+        pt.plot_2D_hist(h2d=h2d_12, ax=axx[3], **plt_hist_kwa, cbar=False)
+        pt.plot_pca_crosshair(ax=axx[3], sigX=h2d_12.varX, sigY=h2d_12.varY)
         # axx[3].plot(dfmerge['PC1'][ia:ib], dfmerge['PC2'][ia:ib], **line_kwa)
         # axx[3].plot(dfmerge['PC1'][ia:ib], dfmerge['PC2'][ia:ib], **line_kwa_inner)
         axx[3].plot(dfmerge['PC1'][ie-tail_length:ie], dfmerge['PC2'][ie-tail_length:ie], **line_kwa)
