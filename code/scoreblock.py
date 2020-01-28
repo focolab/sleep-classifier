@@ -53,19 +53,20 @@ class ScoreBlock(object):
         stack blocks on top of each other
     count():
         count occurances of (categorical) states in each (data) row
-    to_json():
-        dump dataframe to csv and everything else to json
-    from_json():
-        load from a previously dumped json
     applymap():
         apply a map (dict) to categorical data, (good for re-naming/merging
         states)
     keeprows():
         keep a subset of rows, based on conditions
+    to_json():
+        dump dataframe to csv and everything else to json
+    from_json():
+        load from a previously dumped json
     
     consensus():
         determine (binary) consensus for each column of df (index and data)
 
+    TODO: confusion matrix method
 
     """
     def __init__(self, loc=None, df=None, index_cols=None, data_cols=None, tagDict={},
