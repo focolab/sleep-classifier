@@ -4,13 +4,13 @@
 #   featurization schemes
 #
 #   powspec:
-#       - computes the power spectrum for each epoch
+#       - computes the power spectrum for each epoch (no overlap)
 #       - smooth, normalize, bandpass, stride
 #
 #   rmspow:
-#       - not using the DFT, numerically safer for short epochs
+#       - avoids DFT, numerically safer for short epochs
 #       - bandpass and compute block averaged rms power
-#       - power is log scaled and the result is standardized (zero mean, unit variance)
+#       - power is log scaled then standardized (zero mean, unit variance)
 #
 
 import pdb
@@ -19,6 +19,22 @@ import pandas as pd
 import numpy as np
 
 import scoreblock as sb
+
+
+def Featurizer(object):
+    """serializable
+    """
+    def __init__(self, params={}):
+        """pretty much just parameter parsing"""
+        pass
+    
+    def featurize(self, edf=None):
+        """returns a scoreblock"""
+        pass
+
+    def default_params(self):
+        """"""
+        pass
 
 
 def make_powspec_params():
@@ -49,7 +65,7 @@ def compute_powspec_features(edfd=None, params={}):
     """
 
     # defaults
-    default_params = make_spectrogram_params()
+    default_params = make_powspec_params()
     pEEG = default_params['spectrogram']['EEG']
     pEMG = default_params['spectrogram']['EMG']
 

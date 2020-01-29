@@ -348,10 +348,10 @@ class ScoreBlock(object):
         if out == 'data_only':
             cc = c_data
         elif out == 'append':
-            dfc = self.df.copy()
-            dfc.loc[len(dfc)] = ccc
+            ser = pd.Series(dict(zip(self.df.columns.values, ccc)))
+            dfc = pd.concat([self.df, ser.to_frame().T]).reset_index(drop=True)
             cc = ScoreBlock(
-                df=dfc, 
+                df=dfc,
                 index_cols=self.copy_index_cols(),
                 tagDict=self.tagDict,
                 ancestry=self.ancestry,                

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 #
-#   - import human scoring datafiles
+#   - import a csv table of score files (and possibly edf files)
 #   - strip out spaces in column names
 #   - consolidate into trial datablocks (with consensus)
+#   TODO: use relative paths in csv?
 #======================================
 import pdb
 import os
@@ -11,25 +12,7 @@ import pandas as pd
 import numpy as np
 import scoreblock as sb
 
-
-class SireniaScoreLoader(object):
-    """load and consolidate sirenia score files (txt)"""
-
-    def __init__(self, df=None):
-        pass
-
-    def load(self):
-        pass
-
-    def dump_trial_blocks(self):
-        pass
-
-    def dump_all_blocks(self):
-        pass
-
-
-
-
+raise Exception('deprecated, replaced by scoreloader.py')
 #==============================================================================
 pp = argparse.ArgumentParser()
 pp.add_argument('-c', required=True, default=None, type=str,  help='csv table of score files')
@@ -40,6 +23,10 @@ os.makedirs(args.dest, exist_ok=True)
 
 # import table of score files
 df = pd.read_csv(args.c, index_col=0)
+
+# for the case for a csv with 'humanScores' and 'edf' files stacked together
+if 'filetype' in df.columns:
+    df = df[df['filetype'] == 'humanScores']
 
 # load scores for each trial/day/scorer
 ydata = []

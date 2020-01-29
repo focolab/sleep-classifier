@@ -13,7 +13,7 @@ tag=$1 || { echo "ERROR: need env name as first arg" ; exit 1; }
 conda create -n $1 $pkg
 source activate $1
 
-conda install -c conda-forge jupyterlab
+#conda install -c conda-forge jupyterlab
 conda install -c plotly plotly 
 conda install -c conda-forge pyedflib 
 

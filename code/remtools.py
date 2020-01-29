@@ -51,7 +51,8 @@ class StagedTrialData(object):
                  scoreblock=None,
                  stagingParameters=None,
                  trial='trialname',
-                 tagDict={}):
+                 edfMetaData=None,
+                 tagDict=None):
         """
         TODO: edf should be a lazy reader (EDFReader)
         """
@@ -68,7 +69,15 @@ class StagedTrialData(object):
         self.scoreblock = scoreblock
         self.stagingParameters = stagingParameters
 
-        self.tagDict = tagDict
+        if edfMetaData is None:
+            self.edfMetaData = {}
+        else:
+            self.edfMetaData = edfMetaData
+
+        if tagDict is None:
+            self.tagDict = {}
+        else:
+            self.tagDict = tagDict
 
 
     def about(self):
@@ -132,6 +141,7 @@ class StagedTrialData(object):
         trial = jdic.get('trial', 'trialname')
         files = jdic.get('files', {})
         tagDict = jdic.get('tagDict', {})
+        edfMetaData = jdic.get('edfMetaData', {})
         stagingParameters = jdic.get('stagingParameters', {})
 
         edfFile = files.get('edf')
@@ -147,6 +157,7 @@ class StagedTrialData(object):
                     scoreblock=scoreblock,
                     features=features,
                     tagDict=tagDict,
+                    edfMetaData=edfMetaData,
                     stagingParameters=stagingParameters)
         return cls(**args)
 

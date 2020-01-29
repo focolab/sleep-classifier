@@ -13,6 +13,8 @@ class TimeSeriesModel1D(object):
     """1D time series model
 
     TODO: do we need this? used a lot in ipynb
+    TODO: essntially a container for feature timeseries + GMM
+
 
     built with signal power analysis in mind
 
@@ -148,10 +150,8 @@ class TwoStateGMMClassifier(object):
        if |p0-p1| < pdiff
 
 
+    TODO: deprecate pdiff, use pmin
     TODO: peak scaling transformation (two peaks at -1, 1)
-
-    TODO: alt constructor from_data() or train().. get sklearn.mixture.GMM inside here
-
     TODO: sklearn.mixture.GMM could be (de-)serialized by tracking:
             n_components
             precisions_init
@@ -160,7 +160,6 @@ class TwoStateGMMClassifier(object):
     """
     def __init__(self, clf=None):
         """
-        
         input
         ------
         clf : (sklearn.mixture.GMM) Two state, 1D GMM (wlog mu_0 < mu_1)

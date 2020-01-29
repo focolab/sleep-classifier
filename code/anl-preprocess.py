@@ -7,7 +7,7 @@
 #   -bundle features and scores (and metadata)
 #
 #   TODO: featurization can be factored out to its own module
-#
+#   TODO: edf files and scores from seperate sources
 #======================================
 import os
 import argparse 
@@ -44,6 +44,7 @@ print(load)
 print('=====================')
 allTrialData = []
 for index, row in load.iterrows():
+    print('LOAD EDF AND SCORES SEPERATELY')
     #== load edf and scores
     edf = rt.EDFData(edf=row['edf'])
 

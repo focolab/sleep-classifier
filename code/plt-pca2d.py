@@ -50,6 +50,8 @@ if __name__ == '__main__':
     labels = ['REM', 'Non REM', 'Wake', 'XXX']
     cmap = 'Greys_r' #'rocket'
 
+    scorer_to_overlay = 'consensus'
+
     # munge params
     pca_hist_kwa = dict(PCs=[1, 2], numsig=3, numbin=60, log=True, normalize=True, levels='auto')
 
@@ -106,8 +108,11 @@ if __name__ == '__main__':
             elif std.scoreblock is not None:
                 scores = std.scoreblock
 
-            ndx = scores.df['scorer'] == 'consensus'
-            df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
+            if scorer_to_overlay in scores.df['scorer'].values:
+                ndx = scores.df['scorer'] ==  scorer_to_overlay
+                df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
+            else:
+                df_xys = None
 
             # pack it up
             dd = dict(std=std, h2d=h2d, df_xys=df_xys)
@@ -149,13 +154,15 @@ if __name__ == '__main__':
 
             # get scores
             if args.s is not None:
-                #pdb.set_trace()
                 scores = sb.ScoreBlock.from_json(args.s).keeprows(conditions=[('trial',trial)])
             elif std.scoreblock is not None:
                 scores = std.scoreblock
 
-            ndx = scores.df['scorer'] == 'consensus'
-            df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
+            if scorer_to_overlay in scores.df['scorer'].values:
+                ndx = scores.df['scorer'] ==  scorer_to_overlay
+                df_xys['scores'] = scores.df[ndx][scores.data_cols].values.ravel()
+            else:
+                df_xys = None
 
             # pack it up
             dd = dict(std=std, h2d=h2d, df_xys=df_xys)
@@ -186,8 +193,8 @@ if __name__ == '__main__':
         #   std/h2d/df_xys
         #
         #   labels
-        #   cmap
         #   levels
+        #   cmap
         #   kwa..
         #
 
@@ -197,6 +204,7 @@ if __name__ == '__main__':
 
         trial = std.tagDict.get('trial', 'tt')
         gt = std.tagDict.get('genotype', 'gt')
+        frq = std.edfMetaData.get('EMG_freq', -1)
         tag = 'GT-%s-trial-%s' % (str(gt), str(trial))
         print('plotting: %s' % (tag))
 
@@ -210,11 +218,6 @@ if __name__ == '__main__':
         ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
 
         for i, label in enumerate(labels):
-            dfi = df_xys[df_xys['scores'] == label]
-            colx, coly = dfi.columns[:2]
-
-            frac = 100.0*len(dfi)/len(df_xys)
-            ntag = 'N=%i  (%2.1f %%)' % (len(dfi), frac)
 
             pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=cmap, levels=levels)
 
@@ -222,10 +225,17 @@ if __name__ == '__main__':
             #if pca is not None:
             pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
 
-            ax[i].plot(dfi[colx], dfi[coly], **point_kwa)
+            if df_xys is not None:
+                dfi = df_xys[df_xys['scores'] == label]
+                colx, coly = dfi.columns[:2]
+                frac = 100.0*len(dfi)/len(df_xys)
+                ntag = 'N=%i  (%2.1f %%)' % (len(dfi), frac)
+                ax[i].plot(dfi[colx], dfi[coly], **point_kwa)
+            else:
+                ntag = ''
 
-            ax[i].text(0.02, 0.98, label, ha='left', va='top', transform = ax[i].transAxes, **text_kwa)
-            ax[i].text(0.98, 0.98, ntag, ha='right', va='top', transform = ax[i].transAxes, **text_kwa)
+            ax[i].text(0.02, 0.98, label, ha='left', va='top', transform=ax[i].transAxes, **text_kwa)
+            ax[i].text(0.98, 0.98, ntag, ha='right', va='top', transform=ax[i].transAxes, **text_kwa)
 
             # gussy it up
             if i<nrow-1:
@@ -233,7 +243,8 @@ if __name__ == '__main__':
                 ax[i].set_xlabel(None)
 
         # meta pimping
-        ax[0].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+        #ax[0].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+        ax[0].set_title('genotype/trial %s %s (f=%s Hz)' % (str(gt), str(trial), str(frq)))
 
         txt = datetime.datetime.now().replace(microsecond=0).isoformat()
         fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
@@ -288,7 +299,8 @@ if __name__ == '__main__':
         # pimping
         ax[0].set_xticklabels([])
         ax[0].set_xlabel(None)
-        ax[0].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+        #ax[0].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+        ax[0].set_title('genotype/trial %s %s (f=%s Hz)' % (str(gt), str(trial), str(frq)))
 
         txt = datetime.datetime.now().replace(microsecond=0).isoformat()
         fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
@@ -311,7 +323,7 @@ if __name__ == '__main__':
 
     # sort by GT
     dff = pd.DataFrame([dd['std'].tagDict for dd in data])
-    #dff['frq'] = [dd['std'].edfMetaData.get('EMG_freq', -1.0) for dd in data] 
+    dff['frq'] = [dd['std'].edfMetaData.get('EMG_freq', -1.0) for dd in data] 
     dff['ndx'] = range(len(dff))
     #dfs = dff.sort_values(by=['genotype', 'frq', 'trial'])
     dfs = dff.sort_values(by=['genotype', 'trial'])
@@ -326,16 +338,17 @@ if __name__ == '__main__':
 
         trial = std.tagDict.get('trial', 'tt')
         gt = std.tagDict.get('genotype', 'gt')
+        frq = std.edfMetaData.get('EMG_freq', -1)
         tag = 'GT-%s-trial-%s' % (str(gt), str(trial))
         print('plotting: %s' % (tag))
 
         pt.plot_2D_hist(h2d=h2d, ax=ax[i], ptype='imshow', cmap=cmap, levels=levels, cbar=False)
         pt.plot_pca_crosshair(ax=ax[i], sigX=h2d.varX, sigY=h2d.varY)
 
-        ax[i].set_title('genotype/trial %s %s' % (str(gt), str(trial)))
+        ax[i].set_title('genotype/trial %s %s (f=%s Hz)' % (str(gt), str(trial), str(frq)))
 
-        txt = '%i Hz' % int(frq)
-        ax[i].text(0.01, 0.01, txt, ha='left', va='top', fontsize=20)
+        # txt = '%i Hz' % int(dfs.loc[ii]['frq'])
+        # ax[i].text(0.01, 0.01, txt, ha='left', va='top', fontsize=20, transform=ax[i].transAxes, color='grey')
 
 
         # gussy it up
