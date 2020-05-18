@@ -1,0 +1,9 @@
+,trial,genotype,day,scorer,file,filetype
+0,335,A1,1,GS,335scores_GS.txt,humanScores
+1,335,A1,1,LJ,335scores_LJ.txt,humanScores
+2,335,A1,1,NG,335scores_NG.txt,humanScores
+3,336,A1,1,GS,336scores_GS.txt,humanScores
+4,336,A1,1,LJ,336scores_LJ.txt,humanScores
+5,336,A1,1,NG,336scores_NG.txt,humanScores
+6,335,A1,1,,335.edf,edf
+7,336,A1,1,,336.edf,edf

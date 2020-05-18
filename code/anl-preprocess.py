@@ -45,6 +45,9 @@ print('=====================')
 allTrialData = []
 for index, row in load.iterrows():
     print('LOAD EDF AND SCORES SEPERATELY')
+    
+    # make_std(edf=None, sb=None, dest=None, params=None)
+
     #== load edf and scores
     edf = rt.EDFData(edf=row['edf'])
 

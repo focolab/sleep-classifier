@@ -398,7 +398,7 @@ def montage_raster(df_index=None, data=None, cmap='rocket', aspect=200,
 
 
         # plot
-        ax[ip].imshow(data[ndx], cmap=cmap, aspect=aspect)
+        ax[ip].imshow(data[ndx], cmap=cmap, aspect=aspect, interpolation='none')
 
 
         # fancy ticks, gridlines and labels

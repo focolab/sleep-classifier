@@ -1,0 +1,20 @@
+{
+  "_about": "features are EMG RMS power with 0s and 90s median filters",
+  "rmspower": [{
+      "tag":"EMG_rmspow_mfw00",
+      "channel":"EMG",
+      "lowcut": 100,
+      "highcut": 130,
+      "epochLength":10,
+      "medianFilterWidth":0
+  },
+    {
+      "tag":"EMG_rmspow_mfw90",
+      "channel":"EMG",
+      "lowcut": 100,
+      "highcut": 130,
+      "epochLength":10,
+      "medianFilterWidth":90
+    }
+  ]  
+}

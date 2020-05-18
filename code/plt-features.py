@@ -94,7 +94,7 @@ def plot_features(df_feat=None, df_scores=None):
     gt_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 
-    # make the badass template
+    # make the template
     fig, ax, channel_info = pt.plot_features_template(
         df_feat_index=df_ndx, 
         unique_scores=unique_scores,
@@ -145,172 +145,161 @@ def plot_features(df_feat=None, df_scores=None):
     return fig, ax
 
 if __name__ == '__main__':
-    """
-    plotting model features
-
-    """
+    """plotting model features"""
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs='+', type=str, help='staged trial data json files')
-    #parser.add_argument('-s', type=str, help='scores.csv')
     parser.add_argument('--dest', default='ANL-plt-features', help='output folder')
     args = parser.parse_args()
-
     os.makedirs(args.dest, exist_ok=True)
 
     print('#=================================================================')
     print('#                        plt-features.py')
     print('#=================================================================')
 
-    # load (preprocessed) data
+    scorer = 'consensus'
+
+    # load featurized data
     allTrialData = [rt.StagedTrialData.from_json(f, loadEDF=False) for f in args.f]
-
-
-
-    #=========================================
-
-    # feature blocks, for average power distributions
-    blocks = [
-        ('EEG1', [2.0, 2.5, 3.0, 3.5], 'EEG1-delta-[2,4)'),
-        ('EEG2', [2.0, 2.5, 3.0, 3.5], 'EEG2-delta-[2,4)'),
-        ('EEG1', [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0], 'EEG1-Theta-[4,7]'),
-        ('EEG2', [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0], 'EEG2-Theta-[4,7]'),
-        ('EMG', [100., 102., 104.], 'EMG-[100,104]'),
-    ]
-
-    # power bins
-    xdom = np.linspace(0, 0.8, 161)
-    bin_L = xdom[:-1]
-    bin_R = xdom[1:]
-    bin_C = (bin_L+bin_R)/2.0
-    dd = np.asarray([bin_L, bin_R, bin_C]).T
-    df_bins = pd.DataFrame(data=dd, columns=['binL', 'binR', 'binC'])
-
-    block_pwr_data = []
-    for std in allTrialData:
-        df_index = std.features.df_index
-
-        data = []
-        # power dist for each block
-        for b in blocks:
-            # filter by channel/freq
-            val1 = df_index['channel'] == b[0]
-            val2 = np.isin(df_index['f[Hz]'], b[1])
-
-            x = std.features.data[val1 & val2].ravel()
-
-            # histogram
-            h = np.histogram(x, bins=xdom)[0]
-            data.append(h)
-
-
-        cols = ['bin-%3.3i' % i for i in np.arange(len(bin_C))]
-        dft = pd.DataFrame(data=data, columns=cols)
-        dft['block'] = [b[2] for b in blocks]
-        dft['trial'] = [std.trial]*len(dft)
-
-        dft.set_index(['trial','block'], inplace=True)
-
-        block_pwr_data.append(dft)
-
-    df_block_power = pd.concat(block_pwr_data, axis=0)
-
-
-
-
-    #=========================================================
-    fig = plt.figure(figsize=(12,4))
-    nrow = 1
-    ncol = len(blocks)
-    ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
-
-
-    for i, b in enumerate(blocks):
-        rows = df_block_power.index.get_level_values('block') == b[2]
-
-        cols = ['bin-%3.3i' % i for i in np.arange(len(bin_C))]
-
-        df = df_block_power[rows]
-        pltdata = df.values.T
-        
-        trial_names = [t.trial for t in allTrialData]
-        for j, row in enumerate(pltdata.T):
-            ax[i].plot(row, label=trial_names[j])
-
-        ax[i].plot(row*0, ls='--', color='gray', alpha=0.5)
-        #pdb.set_trace()
-        # bpd =
-        # ax
-        #plt.yscale('symlog')
-
-        if i==0:
-            ax[i].set_ylabel('N(signal power)')
-
-        if i>=0:
-            #ax[i].spines['top'].set_visible(False)
-            ax[i].set_yticklabels([])
-
-        if i == len(blocks)-1:
-            #ax[i].legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=2, fontsize=8)
-            ax[i].legend(ncol=1, fontsize=8)
-
-        ax[i].set_xlim([0,20])
-        ax[i].set_xlabel('signal power')
-        ax[i].set_title(b[2])
-
-    plt.tight_layout()
-    txt = datetime.datetime.now().replace(microsecond=0).isoformat()
-    fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
-    plt.savefig(os.path.join(args.dest, 'plot-features-blockpower.png'), dpi=300)
-
-
-
-
 
     # PLOTTING
     for std in allTrialData:
-        #raise Exception('use std.features instead of sxxb_prep')
-        #df_feat = std.sxxb_prep.to_dataframe()
         df_feat = std.features.dfmi
-
 
         # plot feature vectors for each trial, split by sleep state
         sb_scores = std.scoreblock
-        sb_scores.about()
+        # sb_scores.about()
         df_scores = sb_scores.df.copy().set_index(sb_scores.index_cols)
-        dfs = df_scores[df_scores.index.get_level_values('scorer') == 'consensus']
+        dfs = df_scores[df_scores.index.get_level_values('scorer') == scorer]
 
         fig, ax = plot_features(df_feat=df_feat, df_scores=dfs)
         txt = datetime.datetime.now().replace(microsecond=0).isoformat()
         fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
-        ax[0].set_title('trial %s' % (str(std.trial)))
-#        fig.suptitle('trial %s' % (str(std.trial)))
+        ax[0].set_title('trial %s (scorer: %s)' % (str(std.trial), scorer))
         plt.savefig(os.path.join(args.dest, 'plot-features-trial-%s.png' % str(std.trial)), dpi=300)
 
 
 
-        # plot feature POWER for each trial, NOT split by sleep state
-        fig, ax = plot_feature_power(df_feat=df_feat)
-        txt = datetime.datetime.now().replace(microsecond=0).isoformat()
-        fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
-        ax[0].set_title('trial %s' % (str(std.trial)))
-#        fig.suptitle('trial %s' % (str(std.trial)))
-        plt.savefig(os.path.join(args.dest, 'plot-features-power-trial-%s.png' % str(std.trial)), dpi=300)
+#==============================================================================
+#=========================== graveyard ========================================
+#==============================================================================
 
 
-        # block power distributions
+    # #=========================================
+
+    # # feature blocks, for average power distributions
+    # blocks = [
+    #     ('EEG1', [2.0, 2.5, 3.0, 3.5], 'EEG1-delta-[2,4)'),
+    #     ('EEG2', [2.0, 2.5, 3.0, 3.5], 'EEG2-delta-[2,4)'),
+    #     ('EEG1', [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0], 'EEG1-Theta-[4,7]'),
+    #     ('EEG2', [4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0], 'EEG2-Theta-[4,7]'),
+    #     ('EMG', [100., 102., 104.], 'EMG-[100,104]'),
+    # ]
+
+    # # power bins
+    # xdom = np.linspace(0, 0.8, 161)
+    # bin_L = xdom[:-1]
+    # bin_R = xdom[1:]
+    # bin_C = (bin_L+bin_R)/2.0
+    # dd = np.asarray([bin_L, bin_R, bin_C]).T
+    # df_bins = pd.DataFrame(data=dd, columns=['binL', 'binR', 'binC'])
+
+    # block_pwr_data = []
+    # for std in allTrialData:
+    #     df_index = std.features.df_index
+
+    #     data = []
+    #     # power dist for each block
+    #     for b in blocks:
+    #         # filter by channel/freq
+    #         val1 = df_index['channel'] == b[0]
+    #         val2 = np.isin(df_index['f[Hz]'], b[1])
+
+    #         x = std.features.data[val1 & val2].ravel()
+
+    #         # histogram
+    #         h = np.histogram(x, bins=xdom)[0]
+    #         data.append(h)
 
 
-    # df_ftr = pd.read_csv(args.f, index_col=0)
-    # df_scr = pd.read_csv(args.s, index_col=0)
+    #     cols = ['bin-%3.3i' % i for i in np.arange(len(bin_C))]
+    #     dft = pd.DataFrame(data=data, columns=cols)
+    #     dft['block'] = [b[2] for b in blocks]
+    #     dft['trial'] = [std.trial]*len(dft)
 
-    #===================================================
-    #   WWRW:
-    #   1. load
-    #   
+    #     dft.set_index(['trial','block'], inplace=True)
+
+    #     block_pwr_data.append(dft)
+
+    # df_block_power = pd.concat(block_pwr_data, axis=0)
 
 
-    # df_ftr.head()
-    # df_scr.head()
+#     for std in allTrialData:
+#         #raise Exception('use std.features instead of sxxb_prep')
+#         #df_feat = std.sxxb_prep.to_dataframe()
+#         df_feat = std.features.dfmi
+
+#         # plot feature POWER for each trial, NOT split by sleep state
+#         fig, ax = plot_feature_power(df_feat=df_feat)
+#         txt = datetime.datetime.now().replace(microsecond=0).isoformat()
+#         fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
+#         ax[0].set_title('trial %s' % (str(std.trial)))
+# #        fig.suptitle('trial %s' % (str(std.trial)))
+#         plt.savefig(os.path.join(args.dest, 'plot-features-power-trial-%s.png' % str(std.trial)), dpi=300)
+
+
+
+    # #=========================================================
+    # fig = plt.figure(figsize=(12,4))
+    # nrow = 1
+    # ncol = len(blocks)
+    # ax = [plt.subplot(nrow, ncol, i+1) for i in range(nrow*ncol)]
+
+
+    # for i, b in enumerate(blocks):
+    #     rows = df_block_power.index.get_level_values('block') == b[2]
+
+    #     cols = ['bin-%3.3i' % i for i in np.arange(len(bin_C))]
+
+    #     df = df_block_power[rows]
+    #     pltdata = df.values.T
+        
+    #     trial_names = [t.trial for t in allTrialData]
+    #     for j, row in enumerate(pltdata.T):
+    #         ax[i].plot(row, label=trial_names[j])
+
+    #     ax[i].plot(row*0, ls='--', color='gray', alpha=0.5)
+    #     #pdb.set_trace()
+    #     # bpd =
+    #     # ax
+    #     #plt.yscale('symlog')
+
+    #     if i==0:
+    #         ax[i].set_ylabel('N(signal power)')
+
+    #     if i>=0:
+    #         #ax[i].spines['top'].set_visible(False)
+    #         ax[i].set_yticklabels([])
+
+    #     if i == len(blocks)-1:
+    #         #ax[i].legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=2, fontsize=8)
+    #         ax[i].legend(ncol=1, fontsize=8)
+
+    #     ax[i].set_xlim([0,20])
+    #     ax[i].set_xlabel('signal power')
+    #     ax[i].set_title(b[2])
+
+    # plt.tight_layout()
+    # txt = datetime.datetime.now().replace(microsecond=0).isoformat()
+    # fig.text(0.99, 0.99, txt, ha='right', va='top', fontsize=12)
+    # plt.savefig(os.path.join(args.dest, 'plot-features-blockpower.png'), dpi=300)
+
+
+
+
+
+
+
+
 
 
     

@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+#
+#
+#   - raster plots of scores (scoreblocks)
+#   - fancy state fraction plot (comparing human vs model)
+#
+#
 
 import os
 import argparse
@@ -29,6 +35,8 @@ sns.set_style('ticks')
 
 def make_frac_plot(df=None, labels=None):
     """ sleep state fraction plots
+
+    comparison of ONE model vs ONE human
 
     df columns:
         genotype
@@ -314,7 +322,7 @@ if __name__ == '__main__':
 
 
     #========================= RASTER PLOTS ===================================
-    mapp = {'Non REM':0, 'REM':0.5, 'Wake':0.99, 'Unscored':0.25}
+    num_2_str_map = {'Non REM':0, 'REM':0.5, 'Wake':0.99, 'Unscored':0.25, 'XXX':0.25}
     montage_kwa = dict(
         panelKey='trial',
         labelKeys=['classifier','M'],
@@ -327,12 +335,13 @@ if __name__ == '__main__':
 
 
     # rows unsorted and sorted by label (gives blocks)
-    sb_num = sb_pred.applymap(mapp)
+    sb_num = sb_pred.applymap(num_2_str_map)
     data = sb_num.data
+
     dsrt = np.sort(sb_num.data, axis=1)
 
     # legend
-    leg = make_score_leg(d=mapp, **leg_kwa, leg_line_kwa=leg_line_kwa)
+    leg = make_score_leg(d=num_2_str_map, **leg_kwa, leg_line_kwa=leg_line_kwa)
 
     fig, ax = pt.montage_raster(
         df_index=sb_num.df_index,
