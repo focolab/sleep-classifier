@@ -65,14 +65,14 @@ class TimeSeriesModel1D(object):
         return hx
 
 
-    def predict(self, pdiff=0.9):
+    def predict(self, pmin=0.95):
         """
         use GMM to make predictions
         
         TODO: make this a scoreblock
         """
 
-        scores = self.gmm2.predict(self.x , pdiff=pdiff)
+        scores = self.gmm2.predict(self.x , pmin=pmin)
         
         #return scores
     
@@ -80,8 +80,9 @@ class TimeSeriesModel1D(object):
 
 
         index = dict(
-            pdiff=pdiff,
-            scoreType='GMM_1D',
+            pmin=pmin,
+            scoreType='model',
+            classifier='GMM_1D',
             )
 
         index_cols = [k for k in index.keys()]
@@ -95,7 +96,6 @@ class TimeSeriesModel1D(object):
 
         return sb.ScoreBlock(df=df, index_cols=index_cols)
 
-        # pdb.set_trace()
 
 
 #         df_data = pd.DataFrame(data=[scores], columns=data_cols)
@@ -140,17 +140,15 @@ class TwoStateGMMClassifier(object):
     
     This GMM has two states plus a crossover region
     
-    Uses the input classifier (sklearn.mixture.GMM) with two modifications:
+    Uses a sklearn.mixture.GMM classifier with two modifications:
     
     1) To correct for spurious assignments at the data limits:
         if x < mu_0, then assign state0
         if x > mu_1, then assign state1
     
     2) Points close to the (inner) decision boundary are assigned the switch state
-       if |p0-p1| < pdiff
+       if max(p0, p1) < pmin
 
-
-    TODO: deprecate pdiff, use pmin
     TODO: peak scaling transformation (two peaks at -1, 1)
     TODO: sklearn.mixture.GMM could be (de-)serialized by tracking:
             n_components
@@ -169,14 +167,11 @@ class TwoStateGMMClassifier(object):
         self.means = clf.means_.ravel()
         self.covs = clf.covariances_.ravel()
         self.weights = clf.weights_.ravel()
-
         self.x0 = np.min(self.means)
         self.x1 = np.max(self.means)
 
-    
     @classmethod
     def from_data(cls, x):
-
         from sklearn import mixture
         # make a Gaussian Mixture Model (sklearn version)
         clf = mixture.GaussianMixture(n_components=2).fit(x.reshape(-1,1))
@@ -188,46 +183,52 @@ class TwoStateGMMClassifier(object):
         print('means  :', self.means)
         print('weights:', self.weights)
 
+    def xinterval(self, pdiff=None, pmin=0.95):
+        """find the switch interval numerically
 
-    def xinterval(self, pdiff=0.9):
-        """find the switch interval numerically"""
+        The crossover interval between the two Gaussians, where the maximum
+        classification probability is below the threshold pmin.
+
+        0.5<pmin<1
+        """
+        if pdiff is not None:
+            print('DEPRECATION WARNING: use pmin not pdiff')
+            pmin = pdiff +(1-pdiff)/2.
 
         xx = np.linspace(self.x0, self.x1, 1000)
         pred_probs = self.clf.predict_proba(xx.reshape(-1, 1))
-        pred_probs_diff = abs(pred_probs[:,0]-pred_probs[:,1])
-
-        ndx = np.where(pred_probs_diff < pdiff)[0]
-
+        pred_probs_max = np.maximum(pred_probs[:,0], pred_probs[:,1])
+        ndx = np.where(pred_probs_max < pmin)[0]
         return xx[[ndx[0], ndx[-1]]]
 
 
-    def predict(self, X, pdiff=0.9):
+    def predict(self, X, pmin=0.95, legacy_output=False):
         """predict state
 
         input
         ------
-        X : input data
-        pdiff : classify as switch if |p0(x)-p1(x)| < pdiff
+        X : input data ()
+        pmin : classify as switch if max(p0,p1) < pmin
 
         output
         ------
-        pred : np.array of predictions in [0,1,-1]
-            0: low
-            1: high
-           -1: switching
+        pred : np.array of predictions in [-1,0,1]
 
+            the output integers are mapped to states via:
+            [-1,0,1] -> [low, switch, high]
+            however if legacy_output is True then:
+            [0,1,-1] -> [low, high, switch]
         """
-
         pred_probs = self.clf.predict_proba(X.reshape(-1, 1))
-        pred_probs_diff = abs(pred_probs[:,0]-pred_probs[:,1])
+        pred_probs_max = np.maximum(pred_probs[:,0], pred_probs[:,1])
 
         # find low/mid/high regions
         is_low = X < self.x0
         is_hgh = X > self.x1
         is_mid = ~is_low & ~is_hgh
 
-        # find switch interval
-        is_switch = is_mid & (pred_probs_diff < pdiff)
+        # find switch cases
+        is_switch = is_mid & (pred_probs_max < pmin)
 
         # start with clf predictions, then correct low/high/switch regions
         pred = self.clf.predict(X.reshape(-1, 1))
@@ -236,9 +237,15 @@ class TwoStateGMMClassifier(object):
         if np.diff(self.means)[0] < 0:
             pred = pred*-1+1
 
-        pred[is_low] = 0
-        pred[is_hgh] = 1
-        pred[is_switch] = -1
+        if legacy_output:
+            pred[is_low] = 0
+            pred[is_hgh] = 1
+            pred[is_switch] = -1
+        else:
+            pred[pred==0] = -1
+            pred[is_low] = -1
+            pred[is_hgh] = 1
+            pred[is_switch] = 0
 
         return pred
 
@@ -263,7 +270,9 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
     epochLength (float) : length [s]
     mfw (float) : median filter width [s], should be an odd multiple of epochLength
     """
-    
+
+    print('make_1DModel should be alt constructor for TimeSeriesModel1D')
+
     # window (array) size
     wsize = int(s.f*epochLength)
 
@@ -343,8 +352,10 @@ def test_full():
     m = TimeSeriesModel1D(t=t, x=x, metaData=metaData)
 
     # predict scores
-    pdiff=0.99
-    scoreblock = m.predict(pdiff=pdiff)
+    # pdiff=0.99
+    pmin = 0.95
+    # scoreblock = m.predict(pdiff=pdiff)
+    scoreblock = m.predict(pmin=pmin)
     scores = scoreblock.data.ravel()
 
 
@@ -356,7 +367,7 @@ def test_full():
 
 
     # GMM limits and peaks
-    pb_lim = m.gmm2.xinterval(pdiff=pdiff)
+    pb_lim = m.gmm2.xinterval(pmin=pmin)
     gmm_peaks = m.gmm2.means
 
     bin_edges = np.linspace(-1.4, 1.4, 21)
@@ -408,7 +419,7 @@ def test_TwoStateGMMClassifier_fromdata():
     myGMM = TwoStateGMMClassifier.from_data(x)
 
 
-    print(myGMM.xinterval(pdiff=0.99))
+    print(myGMM.xinterval(pmin=0.95))
 
     # metaData = {}
 

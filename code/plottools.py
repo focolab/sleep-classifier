@@ -20,7 +20,6 @@ from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 from matplotlib.colors import BoundaryNorm
 
-
 sns.set(color_codes=True)
 sns.set_style('ticks')
 

@@ -110,6 +110,10 @@ class ScoreBlock(object):
     def numrows(self):
         return self.df.shape[0]
 
+    @property
+    def numdatacols(self):
+        return self.df.shape[1]
+
     def about(self):
         """executive summary"""
         opj = os.path.join
@@ -311,8 +315,6 @@ class ScoreBlock(object):
             )
 
         return out
-
-
 
 
     def consensus(self, out='append', index_fill='consensus', data_fill='XXX'):
