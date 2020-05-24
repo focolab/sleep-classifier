@@ -12,31 +12,15 @@ import scoreblock as sb
 class TimeSeriesModel1D(object):
     """1D time series model
 
-    TODO: do we need this? used a lot in ipynb
-    TODO: essntially a container for feature timeseries + GMM
-
-
-    built with signal power analysis in mind
-
-    given a time series, compute
-        histogram
-        two* state GMM classifier (low/switch/high)
-        predicted scores
-
-
-    how to include
-    trial/day/signal/etc
+    A 1D timeseries, and accompanying two-state GMM classifier
     """
-
-    def __init__(self, t, x, metaData={}):
+    def __init__(self, t, x, metaData=None):
         """
-
         input
         ------
         t (array) : time values [s]
         x (array) : data values
-
-        metaData :
+        metaData (dict) : things like trial, day, etc
         """
         from sklearn import mixture
 
@@ -49,9 +33,11 @@ class TimeSeriesModel1D(object):
         self.t = t
         self.x = x
         self.gmm2 = gmm2
-        self.metaData = metaData
+        if metaData is None:
+            self.metaData = {}
+        else:
+            self.metaData = metaData
             
-
     def hx(self, bins=50):
         """
         bins : as in np.histogram
@@ -59,36 +45,19 @@ class TimeSeriesModel1D(object):
         # x histogram
         hx, be = np.histogram(self.x, bins=bins)
         hx = hx/len(self.x)
-        #self.hx = hx
-        #self.hx = hx
-        #self.hx_be = be
         return hx
 
-
     def predict(self, pmin=0.95):
-        """
-        use GMM to make predictions
+        """use GMM to make predictions
         
-        TODO: make this a scoreblock
+        returns a ScoreBlock
         """
-
         scores = self.gmm2.predict(self.x , pmin=pmin)
-        
-        #return scores
     
         data_cols = ['epoch-%6.6i' % (i+1) for i in range(len(scores))]
-
-
-        index = dict(
-            pmin=pmin,
-            scoreType='model',
-            classifier='GMM_1D',
-            )
-
+        index = dict(pmin=pmin, scoreType='model', classifier='GMM_1D')
         index_cols = [k for k in index.keys()]
         index_vals = [v for v in index.values()]
-
-
         data = index_vals+[s for s in scores]
 
         # dataframe via series
@@ -97,31 +66,8 @@ class TimeSeriesModel1D(object):
         return sb.ScoreBlock(df=df, index_cols=index_cols)
 
 
-
-#         df_data = pd.DataFrame(data=[scores], columns=data_cols)
-
-#         index_cols = ['classifier', 'medianFilterWidth']
-#         index_data = zip(classifiers, mfws)
-#         df_index = pd.DataFrame(data=index_data, columns=index_cols)
-
-#         df_index['scoreType'] = ['EMGpowerGMM']*2
-#         df_index['epochLength'] = [el]*2
-#         df_index['GMM_pdiff'] = [pdiff]*2
-
-#         df = pd.concat([df_index, df_data], axis=1)
-
-#         scoreblock = sb.ScoreBlock(df=df, index_cols=df_index.columns.tolist()) #.applymap(names)
-
-    
-        
-
-
 def block_avg(x, n, strict=True):
     """"""
-    #     aa = np.asarray([1,1,1,2,2,2,3,3,3])    
-    #     ba = block_avg(aa, 4, strict=False)
-    #     print(ba)
-
     if len(x)%n != 0:
         if not strict:
             print('WARNING: n does not evenly divide len(x)')
@@ -134,9 +80,8 @@ def block_avg(x, n, strict=True):
     return np.asarray(ans)
 
 
-
 class TwoStateGMMClassifier(object):
-    """slightly modified gaussian mixture model (1D, two states)
+    """modified Gaussian mixture model (1D, two states)
     
     This GMM has two states plus a crossover region
     
@@ -162,7 +107,6 @@ class TwoStateGMMClassifier(object):
         ------
         clf : (sklearn.mixture.GMM) Two state, 1D GMM (wlog mu_0 < mu_1)
         """
-        
         self.clf = clf
         self.means = clf.means_.ravel()
         self.covs = clf.covariances_.ravel()
@@ -173,7 +117,6 @@ class TwoStateGMMClassifier(object):
     @classmethod
     def from_data(cls, x):
         from sklearn import mixture
-        # make a Gaussian Mixture Model (sklearn version)
         clf = mixture.GaussianMixture(n_components=2).fit(x.reshape(-1,1))
         return cls(clf=clf)
 
@@ -251,13 +194,10 @@ class TwoStateGMMClassifier(object):
 
 
 def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
-    """
-
+    """DEPRECATED (use featurize code instead)
     - signal processing
     - feature building (rms power)
     - builds a 1D time series model
-
-    TODO: featurization code is duplicated in anl-preprocess, deprecate THIS
 
     NOTE: processing steps here might need to be split apart
             (rms power, block averaging, median filtering, log scaling, mean subtraction)
@@ -272,7 +212,7 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
     """
 
     print('make_1DModel should be alt constructor for TimeSeriesModel1D')
-
+    raise Exception('deprecated')
     # window (array) size
     wsize = int(s.f*epochLength)
 
@@ -324,112 +264,71 @@ def make_1DModel(s=None, epochLength=10, mfw=0, verbose=False):
 
 def test_full():
     """
-
     - synthetic signal
     - built tsm1d
     - score preditions
-
     """
-    #import remtools as rt
     import matplotlib.pyplot as plt
-
     os.makedirs('scratch', exist_ok=True)
-
     np.random.seed(seed=123)
 
-
     # generate time series (sin wave)
+    x0 = -2
     t = np.arange(81)
-    x = 1*np.sin(0.05*t/2*np.pi)
-
-    # x = 2/(1+np.exp(0.2*(200-t)))-1
-    # x += np.random.randn(len(t))*0.2
-
-
-    metaData = {}
+    x = 1*np.sin(0.05*t/2*np.pi)+x0
 
     # build the model
-    m = TimeSeriesModel1D(t=t, x=x, metaData=metaData)
+    m = TimeSeriesModel1D(t=t, x=x, metaData={})
 
     # predict scores
-    # pdiff=0.99
-    pmin = 0.95
-    # scoreblock = m.predict(pdiff=pdiff)
+    pmin = 0.99
     scoreblock = m.predict(pmin=pmin)
     scores = scoreblock.data.ravel()
-
-
-    # predicted switches
-    assert scores[4] == -1
-    assert scores[5] == 1
-    assert scores[47] == -1
-    assert scores[48] == 0
-
 
     # GMM limits and peaks
     pb_lim = m.gmm2.xinterval(pmin=pmin)
     gmm_peaks = m.gmm2.means
 
-    bin_edges = np.linspace(-1.4, 1.4, 21)
+    # histogram
+    bin_edges = np.linspace(x0-1.4, x0+1.4, 21)
     bin_centers = (bin_edges[1:] + bin_edges[:-1])/2
     hx = m.hx(bins=bin_edges)
-
-
-    # print(x)
-    # print(np.mean(x))
-    # print(gmm_peaks)
-    # print(m.gmm2.covs)
-    # print(m.gmm2.weights)
-
 
     # plot for sanity checking
     figx = plt.figure(figsize=(12, 4))
     ax = [plt.subplot(1, 4, (1, 3))]
     ax.append(plt.subplot(1, 4, 4, sharey=ax[0]))
-
     ax[0].plot(t, x, '-o', mfc='grey', label='data')
-    ax[0].plot(t, scores-2, '-o', mfc='grey', label='scores')
+    ax[0].plot(t, scores, '-o', mfc='grey', label='scores')
     ax[0].axhspan(pb_lim[0], pb_lim[1], color='grey', alpha=0.2)
     ax[0].axhline(gmm_peaks[0], color='red', alpha=0.4)
     ax[0].axhline(gmm_peaks[1], color='red', alpha=0.4)
-
+    ax[0].legend()
     ax[1].plot(hx, bin_centers, '-o', mfc='grey', label='data')
     ax[1].axhspan(pb_lim[0], pb_lim[1], color='grey', alpha=0.2)
     ax[1].axhline(gmm_peaks[0], color='red', alpha=0.4)
     ax[1].axhline(gmm_peaks[1], color='red', alpha=0.4)
-
-    ax[0].legend()
-
     plt.savefig('scratch/plot-ts-model-1D-demo.png')
 
+    # verify that predicted scores are correct (-1 low; 0 mid; 1 high)
+    assert scores[4] == 0
+    assert scores[5] == 1
+    assert scores[47] == -1
+    assert scores[48] == -1
 
 
 def test_TwoStateGMMClassifier_fromdata():
-
-
-    os.makedirs('scratch', exist_ok=True)
-    np.random.seed(seed=123)
-
     # generate time series (sin wave)
     t = np.arange(81)
     x = 1*np.sin(0.05*t/2*np.pi)
-    # x = 2/(1+np.exp(0.2*(200-t)))-1
-    # x += np.random.randn(len(t))*0.2
 
     myGMM = TwoStateGMMClassifier.from_data(x)
-
-
     print(myGMM.xinterval(pmin=0.95))
-
-    # metaData = {}
-
-    # # build the model
-    # m = TimeSeriesModel1D(t=t, x=x, metaData=metaData)
 
 
 
 if __name__ == '__main__':
 
     test_TwoStateGMMClassifier_fromdata()
-    #test_full()
+    test_full()
 

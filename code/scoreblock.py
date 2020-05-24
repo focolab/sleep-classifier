@@ -243,21 +243,14 @@ class ScoreBlock(object):
 
         declarative method for row selection based off the index dataframe
 
-        TODO: make this take heirarchical args and 
+        a tangled up mess, but it works for a few cases
 
         keeprows conditions
-    
         ('colname', value, comparison)  
                 ('classifier', 'OVO', 'eq')
                 ('classifier', ['OVO','OVR'], 'in')
-
-
         ('colname', func)               ('classifier', lambda x: x in ['OVO', 'OVR'])
     
-    
-    
-
-
         input
         ------
         conditions (list): list of (col, val) tuples where col is a column
@@ -273,8 +266,6 @@ class ScoreBlock(object):
         examples
         ------
         [('trial', 335), ('day', 1), 'all']
-
-
         """
 
         # dictionary of pairwise comparison functions
@@ -288,7 +279,6 @@ class ScoreBlock(object):
             'in': lambda a,b: a in b
             #'isnan': lambda a
         }
-
 
         if comparison not in ['all', 'any']:
             raise Exception('comparison must be all or any')
@@ -391,64 +381,10 @@ class ScoreBlock(object):
         return out
 
 
-    # # # def countXX(self, mask=None, maskname=None, maskcolname='mask', frac=False):
-    # # #     """count occurances of states for each data row
-        
-    # # #     TODO: make mask a separate method
-
-    # # #     - use mask to select column subsets (i.e. light and dark intervals)
-    # # #     - NOTE: score_names (unique) are sorted by np.unique
-    # # #     """
-
-    # # #     def get_score_counts(data=None):
-    # # #         score_names = np.unique(data)
-    # # #         score_counts = []
-    # # #         for row in data:
-    # # #             score_counts.append({x:row.tolist().count(x) for x in score_names})
-    # # #         df_counts = pd.DataFrame(score_counts)
-    # # #         return df_counts
-
-    # # #     if mask is not None:
-    # # #         self.mask(mask=mask, maskname=maskname, maskcolname=maskcolname)
-
-
-    # # #     # i can has mask?
-    # # #     if mask is None:
-    # # #         df_counts = get_score_counts(data=self.data)
-    # # #     else:
-    # # #         df_counts = get_score_counts(data=self.data[:, mask])
-
-
-    # # #     # convert to fractions?
-    # # #     if frac == True:
-    # # #         rowsums = np.sum(df_counts.values, axis=1)
-    # # #         for col in df_counts.columns:
-    # # #             df_counts[col] /= rowsums
-
-
-    # # #     dfc = pd.concat([self.df_index, df_counts], axis=1)
-
-
-    # # #     index_cols = self.df_index.columns.tolist()
-    # # #     data_cols = df_counts.columns.tolist()
-
-    # # #     if maskname is not None:
-    # # #         dfc[maskcolname] = [maskname]*len(df_counts)
-    # # #         index_cols += [maskcolname]
-
-    # # #     dfc = dfc[index_cols+data_cols]
-    # # #     # build a new ScoreBlock
-    # # #     out = ScoreBlock(
-    # # #         df=dfc,
-    # # #         index_cols=index_cols,
-    # # #         tagDict=self.tagDict
-    # # #         )
-
-    # # #     return out
-
 
     def count(self, frac=False):
         """count occurances of states for each data row
+        (mainly for categorical data)
         - NOTE: score_names (unique) are sorted by np.unique
         """
 
@@ -544,8 +480,6 @@ class ScoreBlock(object):
 #==============================================================================
 #===================== TESTING ================================================
 #==============================================================================
-
-
 def fibo(nrow=3, ncol=4):
     """some numbers in an array"""
     N = ncol   # cols
@@ -556,13 +490,25 @@ def fibo(nrow=3, ncol=4):
     data = fibo[:M*N].reshape(N, M).T
     return data
 
-def states(nrow=3, ncol=4, states=None):
-    """make an array with classification states (discrete, strings)"""
-    if states is None:
-        states = ['duck', 'stoat', 'herring']
-
-    return np.random.choice(states, size=(nrow,ncol))
-
+def demo_block():
+    """Some categorical data (N=6 columns)"""
+    tagDict = dict(name='gallahad', quest='grail', color='blue')
+    N = 6
+    data = [
+        ['duck',    'herring', 'stoat', 'stoat',   'stoat', 'herring'],
+        ['duck',    'stoat',   'duck',  'stoat',   'stoat', 'herring'],
+        ['stoat',   'duck',    'duck',  'herring', 'stoat', 'herring'],
+        ['herring', 'herring', 'stoat', 'stoat',   'stoat', 'herring']
+    ]
+    # ScoreBlock
+    data_cols = ['dc-%4.4i' % n for n in range(N)]
+    ndx = zip([0, 1, 2, 3], ['a', 'b', 'c', 'd'])
+    index_cols = ['number', 'letter']
+    df1 = pd.DataFrame(data=ndx, columns=index_cols)
+    df2 = pd.DataFrame(data=data, columns=data_cols)
+    df = pd.concat([df1, df2], axis=1)
+    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
+    return sb1
 
 def test_scoreblock_stack():
     """test scoreblock stacking"""
@@ -633,94 +579,29 @@ def test_scoreblock_stack():
 
 def test_scoreblock_consensus():
     """testing consensus"""
-
-    tagDict = dict(name='gallahad', quest='grail', color='blue')
-    N = 5
-    data = [
-        ['duck',  'herring', 'duck', 'stoat',   'herring'],
-        ['duck',  'stoat',   'duck', 'stoat',   'herring'],
-        ['stoat', 'duck',    'duck', 'herring', 'herring'],
-        ['stoat', 'duck',    'duck', 'duck',    'herring'],
-    ]
-
-    # ScoreBlock 1
-    data_cols = ['dc-%4.4i' % n for n in range(N)]
-    ndx = zip([0, 1, 2, 3], ['a', 'a', 'b','b'], ['camelot', 'camelot', 'camelot', 'camelot'])
-    index_cols = ['number', 'letter', 'place']
-    df1 = pd.DataFrame(data=ndx, columns=index_cols)
-    df2 = pd.DataFrame(data=data, columns=data_cols)
-    df = pd.concat([df1, df2], axis=1)
-    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols)
-
+    sb1 = demo_block()
+    sb1.df['letter'] = ['a', 'a', 'a', 'a']     # manually make these all the same
     cc = sb1.consensus(index_fill='ConSEnSuS', data_fill='LOL')
-
-    assert cc.df_index.iloc[-1].tolist() == ['ConSEnSuS', 'ConSEnSuS', 'camelot']
-    assert cc.data[-1].tolist() == ['LOL', 'LOL', 'duck', 'LOL', 'herring']
-
+    assert cc.df_index.iloc[-1].tolist() == ['ConSEnSuS', 'a']
+    assert cc.data[-1].tolist() == ['LOL', 'LOL', 'LOL', 'LOL', 'stoat', 'herring']
 
 def test_scoreblock_applymap():
     """test applymap (map data values via dictionary)"""
-
-    mapp = dict(duck='DUCK')
-
-    tagDict = dict(name='gallahad', quest='grail', color='blue')
-    # some categorical data (N=6 columns)
-    N = 4
-    data = [
-        ['duck', 'herring', 'stoat', 'stoat'],
-        ['duck', 'stoat', 'duck', 'stoat'],
-        ['stoat', 'duck', 'duck', 'herring'],
-    ]
-
-    # ScoreBlock 1
-    data_cols = ['dc-%4.4i' % n for n in range(N)]
-    ndx = zip([0, 1, 2], ['a', 'b', 'c'])
-    index_cols = ['number', 'letter']
-    df1 = pd.DataFrame(data=ndx, columns=index_cols)
-    df2 = pd.DataFrame(data=data, columns=data_cols)
-    df = pd.concat([df1, df2], axis=1)
-    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols)
-
-    sb2 = sb1.applymap(mapp)
-    assert sb2.data_cols[0] == 'dc-0000', 'should be dc-0000'
-    assert sb2.data_cols[-1] == 'dc-0003', 'should be dc-0005'
+    sb1 = demo_block()
+    sb2 = sb1.applymap(dict(duck='DUCK'))
     assert sb2.tagDict['color'] == 'blue', 'should be blue'
     assert sb2.index_cols[0] == 'number', 'should be number'
-    assert sb2.df['dc-0001'].tolist() == ['herring', 'stoat', 'DUCK']
-    assert sb2.df['dc-0002'].tolist() == ['stoat', 'DUCK', 'DUCK']
-
-
+    assert sb2.df['dc-0001'].tolist() == ['herring', 'stoat', 'DUCK', 'herring']
+    assert sb2.df['dc-0002'].tolist() == ['stoat', 'DUCK', 'DUCK', 'stoat']
 
 def test_scoreblock_json():
     """test scoreblock json export/import"""
-
     loc = 'scratch'
     os.makedirs(loc, exist_ok=True)
-
-    tagDict = dict(name='gallahad', quest='grail', color='blue')
-
-    # some categorical data (N=6 columns)
-    N = 6
-    data = [
-        ['duck', 'herring', 'stoat', 'stoat', 'stoat', 'herring'],
-        ['duck', 'stoat', 'duck', 'stoat', 'stoat', 'herring'],
-        ['stoat', 'duck', 'duck', 'herring', 'stoat', 'herring'],
-        ['herring', 'herring', 'stoat', 'stoat', 'stoat', 'herring']
-    ]
-
-    # ScoreBlock 1
-    data_cols = ['dc-%4.4i' % n for n in range(N)]
-    ndx = zip([0, 1, 2, 3], ['a', 'b', 'c', 'd'])
-    index_cols = ['number', 'letter']
-    df1 = pd.DataFrame(data=ndx, columns=index_cols)
-    df2 = pd.DataFrame(data=data, columns=data_cols)
-    df = pd.concat([df1, df2], axis=1)
-    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
-
+    sb1 = demo_block()
     # dump
     jf = os.path.join(loc, 'test-scoreblock.json')
     sb1.to_json(f=jf)
-
     # reload
     sb2 = ScoreBlock.from_json(jf)
 
@@ -732,29 +613,10 @@ def test_scoreblock_json():
     assert sb2.df['dc-0001'].tolist() == ['herring', 'stoat', 'duck', 'herring']
 
 
-
 def test_scoreblock_count():
     """test scoreblock counting (and masking)"""
-
-    tagDict = dict(name='gallahad', quest='grail', color='blue')
-
-    # some categorical data (N=6 columns)
     N = 6
-    data = [
-        ['duck', 'herring', 'stoat', 'stoat', 'stoat', 'herring'],
-        ['duck', 'stoat', 'duck', 'stoat', 'stoat', 'herring'],
-        ['stoat', 'duck', 'duck', 'herring', 'stoat', 'herring'],
-        ['herring', 'herring', 'stoat', 'stoat', 'stoat', 'herring']
-    ]
-
-    # ScoreBlock 1
-    data_cols = ['dc-%4.4i' % n for n in range(N)]
-    ndx = zip([0, 1, 2, 3], ['a', 'b', 'c', 'd'])
-    index_cols = ['number', 'letter']
-    df1 = pd.DataFrame(data=ndx, columns=index_cols)
-    df2 = pd.DataFrame(data=data, columns=data_cols)
-    df = pd.concat([df1, df2], axis=1)
-    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
+    sb1 = demo_block()
 
     # make masks and do counts
     maskAM = slice(0, N//2)
@@ -763,7 +625,6 @@ def test_scoreblock_count():
     sb_counts_all = sb1.mask(maskname='24h').count(frac=True)
     sb_counts_am = sb1.mask(mask=maskAM, maskname='12hAM').count(frac=True)
     sb_counts_pm = sb1.mask(mask=maskPM, maskname='12hPM').count(frac=True)
-
 
     assert sb_counts_all.data_cols == ['duck', 'herring', 'stoat']
     assert sb_counts_am.data_cols == ['duck', 'herring', 'stoat']
@@ -780,35 +641,13 @@ def test_scoreblock_count():
 
 def test_bool_mask():
     """test boolean mask"""
-
-    tagDict = dict(name='gallahad', quest='grail', color='blue')
-
-    # some categorical data (N=6 columns)
-    N = 6
-    data = [
-        ['duck', 'herring', 'stoat', 'stoat', 'stoat', 'herring'],
-        ['duck', 'stoat', 'duck', 'stoat', 'stoat', 'herring'],
-        ['stoat', 'duck', 'duck', 'herring', 'stoat', 'herring'],
-        ['herring', 'herring', 'stoat', 'stoat', 'stoat', 'herring']
-    ]
-
-    # ScoreBlock 1
-    data_cols = ['dc-%4.4i' % n for n in range(N)]
-    ndx = zip([0, 1, 2, 3], ['a', 'b', 'c', 'd'])
-    index_cols = ['number', 'letter']
-    df1 = pd.DataFrame(data=ndx, columns=index_cols)
-    df2 = pd.DataFrame(data=data, columns=data_cols)
-    df = pd.concat([df1, df2], axis=1)
-    sb1 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
+    sb1 = demo_block()
 
     # make mask and apply it
     mask00 = [True, True, True, False, True, False]
     sb_mask00 = sb1.mask(mask=mask00, maskname='mask00')
 
     assert sb_mask00.data_cols == ['dc-0000','dc-0001','dc-0002','dc-0004']
-
-    sb_mask00.about()
-    pdb.set_trace()
 
 
 if __name__ == '__main__':
@@ -820,7 +659,4 @@ if __name__ == '__main__':
     test_scoreblock_applymap()
     test_scoreblock_json()
     test_scoreblock_stack()
-
-
-
 

@@ -97,6 +97,8 @@ def plot_features_template(df_feat_index=None, unique_scores=None,
                            boxheight=0.05):
     """template for plotting state-specific feature vectors
 
+    (only really intended for power spectrum features)
+
     df_feat_index should have columns 'channel' and 'f[Hz]'
     """
 
@@ -276,6 +278,8 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
                      ):
     """plot a histogram of data projected onto a 2D PC basis
 
+    TODO: method of PCA class
+
     NOTE: this is only the histogram (raw data not plotted here)
     TODO: disentangle 2D histo from PCA specifics. WWRW is general 2D plotter
 
@@ -328,7 +332,10 @@ def plot_PCA_2D_hist(X=None, pca=None, ax=None,
 
 
 def plot_pca_crosshair(ax=None, sigX=1, sigY=1):
-    """crosshairs, with ticks"""
+    """crosshairs, with ticks
+
+    TODO: method of hist2d?
+    """
     gridkwa = dict(color='white', alpha=0.7)
 
     ticksig = [1, 2]
@@ -346,6 +353,7 @@ def plot_pca_crosshair(ax=None, sigX=1, sigY=1):
 def montage_raster(df_index=None, data=None, cmap='rocket', aspect=200,
                    panelKey='T', labelKeys=['C','M'], leg=None, wtf=False):
     """
+    TODO: method of ScoreBlock
     montage of raster plots
 
     TODO: color / label legend
