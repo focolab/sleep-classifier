@@ -128,9 +128,9 @@ def plot_ts_chunk(mx=None, my=None, ax=None, n=0, N=0, scores=None):
     ndx_u = sc == 'NOTSURE'
 
     # convert time from seconds to hours, ticks every hour
-    tc/=3600.
-    tick_min = int(np.floor(tc[0]))
-    tick_max = int(np.ceil(tc[-1]))
+    tch = tc/3600.
+    tick_min = int(np.floor(tch[0]))
+    tick_max = int(np.ceil(tch[-1]))
     xticks = range(tick_min, tick_max+1)
 
     # plot the rms power time series
@@ -138,14 +138,14 @@ def plot_ts_chunk(mx=None, my=None, ax=None, n=0, N=0, scores=None):
     dy1 = -2
     ax.axhline(y=dy0, dashes=(4,8), color='grey', lw=0.5, alpha=0.5)
     ax.axhline(y=dy1, dashes=(4,8), color='grey', lw=0.5, alpha=0.5)
-    ax.plot(tc, xc+dy0, label=mx.metaData['channel'], **line_kwa)
-    ax.plot(tc, yc+dy1, label=my.metaData['channel'], **line_kwa)
+    ax.plot(tch, xc+dy0, label=mx.metaData['channel'], **line_kwa)
+    ax.plot(tch, yc+dy1, label=my.metaData['channel'], **line_kwa)
     tx_kwa = dict(ha='right', va='center', color='grey', fontsize='x-small')
-    ax.text(tc[0], dy0, mx.metaData['channel']+' ', **tx_kwa)
-    ax.text(tc[0], dy1, my.metaData['channel']+' ', **tx_kwa)
+    ax.text(tch[0], dy0, mx.metaData['channel']+' ', **tx_kwa)
+    ax.text(tch[0], dy1, my.metaData['channel']+' ', **tx_kwa)
 
     # red rug plot for NOTSURE epochs
-    ax.scatter(tc[ndx_u], 0*tc[ndx_u], marker='|', color='r', edgecolors='r', lw=0.5, s=8)
+    ax.scatter(tch[ndx_u], 0*tch[ndx_u], marker='|', color='r', edgecolors='r', lw=0.5, s=8)
 
     # pimp my plot
     ax.set_ylim([-4.5, 4.5])
@@ -296,54 +296,139 @@ def plot_exsum(mx, my, scores=None, df=None):
     return fig, ax_top, ax_bot
 
 
+class AutoScorer(object):
+    """conservative autoscoring using EMG and EEG RMS power
 
-def autoscore(edf=None, ft=None, tagDict=None, pmin=0.89, dest='ANL-autoscore'):
-    """autoscore one trial
-    
-    TODO: scoreblock output
-    TODO: sirenia output
-    TODO: automagic folder naming?
+    attributes
+    ------
+    ft (str): featurization parameters (json file)
+    edf (str): edf file
+    trial (int): trial (mouse) name, usually 3-4 digit integer
+    day (int): for when multiple days were recorded for the same trial (mouse)
+    tag (str): nametag that combines trial and day
+    pmin (float): threshold for GMM classification (see relevant methods)
+    dest (str): folder/path for output
+    std (StagedTrialData): computed features, plus some other goodies
+    mx (TimeSeriesModel1D): 1D GMM for the x-axis (EMG)
+    my (TimeSeriesModel1D): 1D GMM for the y-axis (EEG)
+    scores_pred (ScoreBlock): predicted scores
+    scores_frac (ScoreBlock): sleep state fractions (derived from scores_pred)
+
+    TODO:
     """
+    def __init__(self, data=None, ft=None,pmin=None, dest=None, append_tag=True):
+        """
+        args
+        ------
+        data (dict): required keys: edf, trial, day.
+        """
+        if data is None:
+            raise Exception('data required')
 
-    trial = tagDict.get('trial', 'xxxtrialxxx')
-    day = tagDict.get('day', -1)
-    tag = 'trial-%s-day-%i' % (trial, day)
+        self.ft = ft
+
+        self.edf = data.get('edf')
+        self.trial = data.get('trial', -1)
+        self.day = data.get('day', -1)
+        self.tag = 'trial-%s-day-%i' % (self.trial, self.day)
+        self.pmin = None if pmin is None else pmin
+        self.dest = 'data-autoscore' if dest is None else dest
+
+        if append_tag:
+            self.dest = '%s-%s' % (self.dest, self.tag)
+        os.makedirs(self.dest, exist_ok=True)
 
 
-    # stage and featurize
-    std = stage(edf=edf, ft=ft, dest=dest, tagDict=tagDict)
+    def about(self):
+        """"""
+        print('-----------------')
+        print('edf  :', self.edf)
+        print('trial:', self.trial)
+        print('day  :', self.day)
 
-    # make two 1D, two-state GMM models
-    mdx = std.stagingParameters["rmspower"][0]
-    mdy = std.stagingParameters["rmspower"][1]
-    mdx['freq'] = std.edf.freq
-    mdy['freq'] = std.edf.freq
-    dx = std.features.data[0]
-    dy = std.features.data[1]
-    tvec = (np.arange(len(dx))+0.5)*mdx.get('epochLength')
-    mx = tsm1d.TimeSeriesModel1D(tvec, dx, metaData=mdx)
-    my = tsm1d.TimeSeriesModel1D(tvec, dy, metaData=mdy)
+    def full_run(self):
+        """run everything, quietly export the plot to file"""
+        self.run()
+        _,_,_ = self.plot(quiet=True, save=True)
+        self.dump()
+        return self
 
-    # carry out classification
-    scores = qp_classifier(mx, my, pmin=pmin)
-    scores.add_const_index_col(name='trial', value=trial, inplace=True)
-    scores.add_const_index_col(name='day', value=day, inplace=True)
+    def run(self, pmin=None):
+        """featurize/train/score"""
 
-    # compute the sleep state percentages for 1st(12A) and 2nd(12B) halfs of the day
-    N = scores.numdatacols
-    state_fracs_A = scores.mask(mask=slice(0, N//2), maskname='12A').count(frac=True)
-    state_fracs_B = scores.mask(mask=slice(N//2, N), maskname='12B').count(frac=True)
-    stk = state_fracs_A.stack(others=[state_fracs_B])
-    pct = (stk.data*1000//1)/10
-    stk.df[stk.data_cols] = pct
-    df_plt = stk.df[stk.df['feature'] == 'consensus']
-    cols = ['pmin', 'trial', 'day', 'mask', 'Wake', 'Non-REM', 'NOTSURE']
-    df_plt = df_plt[cols]
 
-    # plot
-    fig, ax_top, ax_bot = plot_exsum(mx, my, scores=scores, df=df_plt)
-    fig.suptitle('trial %s, day %i' % (trial, day), fontsize=20)
-    plt.savefig(os.path.join(dest, 'plot-%s.png' % tag), dpi=300)
+        tagDict = dict(trial=self.trial, day=self.day)
 
-    # dump (std, scores, stk)
-    # std.to_json()
+        # override
+        if pmin is None:
+            pmin = self.pmin
+
+        # STAGE n FEATURIZE (make this a method lolo)
+        std = stage(edf=self.edf, ft=self.ft, dest=self.dest, tagDict=tagDict)
+
+        # TRAIN: make a 1D, two-state GMM model for x and for y
+        mdx = std.stagingParameters["rmspower"][0]
+        mdy = std.stagingParameters["rmspower"][1]
+        mdx['freq'] = std.edf.freq
+        mdy['freq'] = std.edf.freq
+        dx = std.features.data[0]
+        dy = std.features.data[1]
+        tvec = (np.arange(len(dx))+0.5)*mdx.get('epochLength')
+        mx = tsm1d.TimeSeriesModel1D(tvec, dx, metaData=mdx)
+        my = tsm1d.TimeSeriesModel1D(tvec, dy, metaData=mdy)
+
+        # CLASSIFY: carry out classification
+        scores = qp_classifier(mx, my, pmin=pmin)
+        scores.add_const_index_col(name='trial', value=self.trial, inplace=True)
+        scores.add_const_index_col(name='day', value=self.day, inplace=True)
+
+        # sleep state percentages for 1st(12A) and 2nd(12B) halfs of the day
+        N = scores.numdatacols
+        state_fracs_A = scores.mask(mask=slice(0, N//2), maskname='12A').count(frac=True)
+        state_fracs_B = scores.mask(mask=slice(N//2, N), maskname='12B').count(frac=True)
+        stk = state_fracs_A.stack(others=[state_fracs_B])
+
+        # consolidated results
+        self.std = std
+        self.mx = mx
+        self.my = my
+        self.scores_pred = scores
+        self.scores_frac = stk
+
+    def dump(self, ):
+        """dump features, scores, and score fractions"""
+        self.std.to_json() #f=os.path.join(self.dest, 'staged-trial-data.json'))
+        self.scores_pred.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_scores.json'))
+        self.scores_frac.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_score_fractions.json'))
+
+    def plot(self, quiet=False, save=False):
+        """
+        quiet=True will suppress the figure popping up by temporarily switching
+        to a non-interactive backend, which is useful for batch processing
+        or jupyter notebooks
+        """
+        # switch to quiet backend?
+        if quiet:
+            b = plt.get_backend()
+            plt.switch_backend('Agg')
+
+        stk = self.scores_frac
+
+        # dataframe with some useful information
+        cols = ['pmin', 'trial', 'day', 'mask', 'Wake', 'Non-REM', 'NOTSURE']
+        df = stk.df.copy()
+        df[stk.data_cols] = (stk.data*1000//1)/10
+        df_plt = df[df['feature'] == 'consensus'][cols]
+
+        # plot
+        fig, ax_top, ax_bot = plot_exsum(self.mx, self.my, scores=self.scores_pred, df=df_plt)
+        fig.suptitle('trial %s, day %i' % (self.trial, self.day), fontsize=20)
+        if save:
+            plt.savefig(os.path.join(self.dest, 'plotx-%s.png' % self.tag), dpi=300)
+
+        # restore other backend
+        if quiet:
+            plt.switch_backend(b)
+
+        return fig, ax_top, ax_bot
+

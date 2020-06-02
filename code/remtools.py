@@ -88,8 +88,13 @@ class StagedTrialData(object):
             print('%15s : %s' % (k, str(v)))
 
 
-    def to_json(self, out='staged-trial-data.json'):
+    def to_json(self, f='staged-trial-data.json', out=None):
         """"""
+
+        if out is not None:
+            print('DEPRECATION use f= not out= for std.to_json')
+            f = out
+
         opj = lambda x: os.path.join(self.loc, x)        
 
         if self.features is not None:
@@ -111,7 +116,7 @@ class StagedTrialData(object):
                     stagingParameters=self.stagingParameters,
                     files=fdic)
         
-        jfl = opj(out)
+        jfl = opj(f)
         with open(jfl,'w') as jout:
             json.dump(jdic, jout, indent=2, sort_keys=False)
             jout.write('\n')
