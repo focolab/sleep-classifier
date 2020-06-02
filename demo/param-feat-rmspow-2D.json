@@ -1,0 +1,20 @@
+{
+  "_about": "featuirzation parmeters EEG and EMG signal data",
+  "rmspower": [{
+      "tag":"EMG_rmspow_mfw00",
+      "channel":"EMG",
+      "lowcut": 100,
+      "highcut": 120,
+      "epochLength":10,
+      "medianFilterWidth":0
+    },
+    {
+      "tag":"EEG_rmspow_mfw00",
+      "channel":"EEG2",
+      "lowcut": 2,
+      "highcut": 14,
+      "epochLength":10,
+      "medianFilterWidth":0
+    }
+  ]  
+}

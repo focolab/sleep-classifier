@@ -338,24 +338,24 @@ class AutoScorer(object):
             self.dest = '%s-%s' % (self.dest, self.tag)
         os.makedirs(self.dest, exist_ok=True)
 
-
     def about(self):
         """"""
-        print('-----------------')
+        print('-------- AutoScorer.about() --------')
         print('edf  :', self.edf)
         print('trial:', self.trial)
         print('day  :', self.day)
 
-    def full_run(self):
+    def full_run(self, quiet=False):
         """run everything, quietly export the plot to file"""
         self.run()
         _,_,_ = self.plot(quiet=True, save=True)
         self.dump()
+        ### print something?
+        # print(self.scores_frac.about())
         return self
 
     def run(self, pmin=None):
         """featurize/train/score"""
-
 
         tagDict = dict(trial=self.trial, day=self.day)
 
@@ -363,7 +363,7 @@ class AutoScorer(object):
         if pmin is None:
             pmin = self.pmin
 
-        # STAGE n FEATURIZE (make this a method lolo)
+        # STAGE n FEATURIZE (make this a method lolo, unpack ft earlier)
         std = stage(edf=self.edf, ft=self.ft, dest=self.dest, tagDict=tagDict)
 
         # TRAIN: make a 1D, two-state GMM model for x and for y
