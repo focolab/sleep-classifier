@@ -243,7 +243,6 @@ class ScoreBlock(object):
 
     def keeprows_iloc(self, iloc=None):
         """"""
-        pdb.set_trace()
         out = ScoreBlock(
             df=self.df.iloc[iloc],
             index_cols=self.df_index.columns.tolist(),
@@ -366,6 +365,7 @@ class ScoreBlock(object):
 
 
     def to_sirenia_txt(self, f='scores.txt', row=0, str2num=None):
+        """dump a row of scores to Sirenia formatted csv (.txt)"""
         df = self.to_sirenia_df(row=row, str2num=str2num)
         df.to_csv(f)
 

@@ -175,7 +175,7 @@ def plot_gmm_overlay(mx, my, ax=None, pmin=0.95, zorder=3):
     ax.plot(mx.gmm2.x1, my.gmm2.x0, 'x', color='grey', ms=15, mew=2, zorder=zorder)
 
 
-def plot2d(mx=None, my=None, panel=None, ax=None, pmin=0.95):
+def plot2d(mx=None, my=None, ax=None, pmin=0.95):
     """scatter plot of EMG/EEG rms power    
     
     """
@@ -222,7 +222,7 @@ def plot2d(mx=None, my=None, panel=None, ax=None, pmin=0.95):
 
 
 def plot_exsum(mx, my, scores=None, df=None):
-    """composing the whole figure
+    """composing the whole figure (executive summary)
     
     input
     ------
@@ -396,10 +396,17 @@ class AutoScorer(object):
         self.scores_frac = stk
 
     def dump(self, ):
-        """dump features, scores, and score fractions"""
+        """dump features and scores"""
         self.std.to_json() #f=os.path.join(self.dest, 'staged-trial-data.json'))
         self.scores_pred.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_scores.json'))
         self.scores_frac.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_score_fractions.json'))
+
+        self.scores_pred.to_sirenia_txt(
+            str2num={'Wake':0, 'Non-REM':1, 'NOTSURE':2},
+            f=os.path.join(os.path.join(self.dest, 'scores-qp-sirenia.txt')),
+            row=2,
+            )
+
 
     def plot(self, quiet=False, save=False):
         """
@@ -431,4 +438,9 @@ class AutoScorer(object):
             plt.switch_backend(b)
 
         return fig, ax_top, ax_bot
+
+
+if __name__ == '__main__':
+
+    print('hello world')
 
