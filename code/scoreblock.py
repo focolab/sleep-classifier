@@ -78,13 +78,16 @@ class ScoreBlock(object):
 
         self.ancestry = ancestry
 
+        if isinstance(self.df, pd.Series):
+            self.df = self.df.to_frame().T
+
         if index_cols is None:
             raise Exception('index_cols required')
         else:
             self.index_cols = index_cols
 
         if data_cols is None:
-            self.data_cols = [c for c in df.columns if c not in self.index_cols]
+            self.data_cols = [c for c in self.df.columns if c not in self.index_cols]
         else:
             self.data_cols = data_cols
 
@@ -238,6 +241,16 @@ class ScoreBlock(object):
         return out
 
 
+    def keeprows_iloc(self, iloc=None):
+        """"""
+        pdb.set_trace()
+        out = ScoreBlock(
+            df=self.df.iloc[iloc],
+            index_cols=self.df_index.columns.tolist(),
+            tagDict=self.tagDict
+            )
+        return out
+
     def keeprows(self, conditions=[], comparison='all'):
         """keep rows from a the dataframe, subject to conditions
 
@@ -350,6 +363,54 @@ class ScoreBlock(object):
                 )
 
         return cc
+
+
+    def to_sirenia_txt(self, f='scores.txt', row=0, str2num=None):
+        df = self.to_sirenia_df(row=row, str2num=str2num)
+        df.to_csv(f)
+
+    def to_sirenia_df(self, row=0, str2num=None):
+        """convert a row of scores to Sirenia formatted DataFrame
+
+        Epoch #,Start Time,End Time,Score #, Score
+        1,10/15/2018 09:00:00,10/15/2018 09:00:10,1,Wake
+        2,10/15/2018 09:00:10,10/15/2018 09:00:20,1,Wake
+        8623,10/16/2018 08:57:00,10/16/2018 08:57:10,2,Non REM
+        8627,10/16/2018 08:57:40,10/16/2018 08:57:50,1,Wake
+        """
+        if str2num is None:
+            str2num = {}
+        num2str = {v:k for k,v in str2num.items()}
+
+        from datetime import datetime, timedelta
+        startdate = "2019-01-02"
+        starttime = "09:00:00"
+        epoch_len = 10
+        scores = self.data[row]
+        num_epochs = len(scores)
+
+        # date time strings
+        dt = datetime.fromisoformat('%sT%s' % (startdate, starttime))
+        epoch_indices = range(1,len(scores)+1)
+        times = [dt + timedelta(seconds=epoch_len*i) for i in range(num_epochs+1)]
+        ta = [xx.strftime('%d/%m/%Y %X') for xx in times[:-1]]
+        tb = [xx.strftime('%d/%m/%Y %X') for xx in times[1:]]
+
+        # we need scores in string and number (integer) format
+        if isinstance(scores[0], str):
+            scores_strs = scores
+            scores_nums = [str2num[x] for x in scores]
+        elif isinstance(scores[0], int):
+            scores_nums = scores
+            scores_strs = [num2str[x] for x in scores]
+        else:
+            raise Exception('wtf')
+
+        data = zip(epoch_indices, ta, tb, scores_nums, scores_strs)
+        cols=['Epoch #', 'Start Time', 'End Time', 'Score #', 'Score']
+        df = pd.DataFrame(data=data, columns=cols).set_index('Epoch #', drop=True)
+
+        return df
 
 
     def mask(self, mask=None, maskname=None, maskcolname='mask'):
@@ -491,7 +552,7 @@ def fibo(nrow=3, ncol=4):
     return data
 
 def demo_block():
-    """Some categorical data (N=6 columns)"""
+    """Scoreblock for testing, with categorical data (N=6 columns)"""
     tagDict = dict(name='gallahad', quest='grail', color='blue')
     N = 6
     data = [
@@ -556,7 +617,6 @@ def test_scoreblock_stack():
     df = pd.concat([df1, df2], axis=1)
     sb4 = ScoreBlock(df=df, tagDict=tagDict, index_cols=index_cols, data_cols=data_cols)
 
-
     # stack and rename index columns
     stk = sb1.stack(others=[sb2], force_data=True, rename_index_cols={'LETTER':'letter'})
     assert stk.df['letter'].tolist() == ['a','b','c','d']*2, 'should be [a,b,c,d,a,b,c,d]'
@@ -569,7 +629,6 @@ def test_scoreblock_stack():
     stk = sb1.stack(others=[sb4], force_data=False)
     assert np.isnan(stk.df['dc-0005'].values[-1]), 'should be nan'
     assert np.isnan(stk.df['dc-0005'].values[-4]), 'should be nan'
-
 
     # stack ragged data and replace nan
     stk = sb1.stack(others=[sb4], force_data=False, data_nan=-1)
@@ -612,7 +671,6 @@ def test_scoreblock_json():
     assert sb2.index_cols[0] == 'number', 'should be number'
     assert sb2.df['dc-0001'].tolist() == ['herring', 'stoat', 'duck', 'herring']
 
-
 def test_scoreblock_count():
     """test scoreblock counting (and masking)"""
     N = 6
@@ -621,11 +679,9 @@ def test_scoreblock_count():
     # make masks and do counts
     maskAM = slice(0, N//2)
     maskPM = slice(N//2, N)
-
     sb_counts_all = sb1.mask(maskname='24h').count(frac=True)
     sb_counts_am = sb1.mask(mask=maskAM, maskname='12hAM').count(frac=True)
     sb_counts_pm = sb1.mask(mask=maskPM, maskname='12hPM').count(frac=True)
-
     assert sb_counts_all.data_cols == ['duck', 'herring', 'stoat']
     assert sb_counts_am.data_cols == ['duck', 'herring', 'stoat']
     assert sb_counts_pm.data_cols == ['herring', 'stoat']
@@ -638,7 +694,6 @@ def test_scoreblock_count():
     stk = sb_counts_all.stack(others=[sb_counts_am, sb_counts_pm], data_nan=-2)
     assert stk.df['duck'].values[-1] == -2, 'should be -2'
 
-
 def test_bool_mask():
     """test boolean mask"""
     sb1 = demo_block()
@@ -649,9 +704,28 @@ def test_bool_mask():
 
     assert sb_mask00.data_cols == ['dc-0000','dc-0001','dc-0002','dc-0004']
 
+def test_sirenia():
+    """test to_sirenia_df and to_sirenia_txt"""
+    loc = 'scratch'
+    os.makedirs(loc, exist_ok=True)
+    sb1 = demo_block()
+
+    # export score row 0 to sireia ready DataFrame
+    str2num = dict(duck=1, herring=2, stoat=3)
+    df = sb1.to_sirenia_df(str2num=str2num, row=0)
+    assert df['Score'][:3].values.tolist() == ['duck', 'herring', 'stoat']
+    assert df['Score #'].values.tolist() == [1, 2, 3, 3, 3, 2]
+
+    # and dump to file
+    sb1.to_sirenia_txt(
+        f=os.path.join(loc,'scores_sirenia.txt'),
+        str2num=str2num,
+        row=0
+        )
+
 
 if __name__ == '__main__':
-
+    test_sirenia()
     test_bool_mask()
     test_scoreblock_count()
     test_scoreblock_consensus()
