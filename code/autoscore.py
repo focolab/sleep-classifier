@@ -10,10 +10,13 @@ import pdb
 import os
 import json
 
+import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import sklearn
+from sklearn.metrics import confusion_matrix
 
 import plottools as pt
 import remtools as rt
@@ -57,7 +60,6 @@ def stage(edf=None, ft=None, dest='xxx', tagDict=None):
         tagDict=tagDict
         )
     return std
-
 
 def qp_classifier(mx, my, pmin=0.95):
     """quick and painless sleep state classifier (Wake, Non-REM, NOTSURE)
@@ -113,6 +115,79 @@ def get_chunk(x, n=2, N=4):
     """return chunk number 'n' of the vector x w/ N equal sized chunks"""
     chunk = len(x)//N
     return x[n*chunk:(n+1)*chunk]
+
+
+def plot_qp_vs_human_scores(autoscorer=None, scoreblock=None):
+    """plot a comparison of autoscorer and human consensus scores (one trial)
+
+    input
+    ------
+    autoscorer (AutoScorer): trained AutoScorer (2D EMG/EEG classifier)
+    scoreblock (ScoreBlock): should only have one row of scores, presumably
+        these are human consensus scores
+
+    output
+    ------
+    fig : figure
+    ax (list): list of subplot axes
+    """
+
+    point_kwa = dict(lw=0, marker='o', ms=2, mec='none', color='grey', alpha=1)
+    text_kwa = dict(color='k', fontsize=10)
+    kwa_cnf = dict(cbar=False, colorkwa=dict(fraction=0.04), cmap=plt.cm.Blues)
+
+    h2d = autoscorer.h2d()
+    mx = autoscorer.mx
+    my = autoscorer.my
+    labels_hum = ['Non REM', 'REM', 'Wake', 'XXX']      # one panel per label
+    labels_cnf = ['Non REM', 'REM', 'Wake', 'XXX', 'NOTSURE']
+
+
+    # human and model score vectors (w/ some tidying)
+    sc_hum = scoreblock.applymap({'Non REM X':'Non REM'}).data.ravel()
+    sc_mdl = autoscorer.scores_pred.applymap({'Non-REM':'Non REM'}).data[-1]
+
+    # build dataframe with xy features and (human) consensus scores
+    xys = np.vstack((mx.x, my.x, scoreblock.data.ravel())).T
+    df_xys = pd.DataFrame(data=xys, columns=['x', 'y', 'scores'])
+
+    # figure setup
+    num_panels = len(labels_hum)+2
+    fig = plt.figure(figsize=(4*num_panels, 4))
+    ax = [plt.subplot(1, num_panels, i+1) for i in range(num_panels)]
+
+    # PLOT joint distribution histogram
+    plt_hist_kwa = dict(cmap='bone', levels='auto', ptype='imshow')
+    pt.plot_2D_hist(h2d=h2d, ax=ax[0], **plt_hist_kwa, cbar=False)
+    plot_gmm_overlay(autoscorer.mx, autoscorer.my, ax=ax[0], pmin=autoscorer.pmin)
+
+    xlim = ax[0].get_xlim()
+    ylim = ax[0].get_ylim()
+
+    # PLOT features grouped by score
+    for i, label in enumerate(labels_hum):
+        axi = ax[i+1]
+        dfi = df_xys[df_xys['scores'] == label]
+        colx, coly = dfi.columns[:2]
+        frac = 100.0*len(dfi)/len(df_xys)
+        ntag = 'N=%i  (%2.1f %%)' % (len(dfi), frac)
+        axi.plot(dfi[colx], dfi[coly], **point_kwa)
+        axi.text(0.02, 0.98, label, ha='left', va='top', transform=axi.transAxes, **text_kwa)
+        axi.text(0.98, 0.98, ntag, ha='right', va='top', transform=axi.transAxes, **text_kwa)
+        plot_gmm_overlay(autoscorer.mx, autoscorer.my, ax=axi, pmin=autoscorer.pmin)
+
+        axi.set_xlim(xlim)
+        axi.set_ylim(ylim)
+
+    # PLOT confusion matrix
+    cnf = confusion_matrix(sc_mdl, sc_hum, labels=labels_cnf)
+    pt.plot_confusion_matrix(ax=ax[-1], cm=cnf, normalize=False, classes=labels_cnf, **kwa_cnf)
+    ax[-1].set_ylabel('model prediction')
+    ax[-1].set_xlabel('human consensus')
+
+    plt.tight_layout()
+
+    return fig, ax
 
 def plot_ts_chunk(mx=None, my=None, ax=None, n=0, N=0, scores=None):
     """plot a chunk of the timeseries and a rug plot for NOTSURE epochs"""
@@ -221,32 +296,17 @@ def plot2d(mx=None, my=None, ax=None, pmin=0.95):
     tx3 = ax.text(xlim[0]+0.1, ylim[0], txt, ha='left', va='bottom', ma='left', fontsize=txt_fontsize, fontfamily='monospace')
 
 
-def plot_exsum(mx, my, scores=None, df=None):
+def plot_exsum(mx, my, h2d=None, scores=None, df=None):
     """composing the whole figure (executive summary)
     
     input
     ------
     mx : (tsm1d) EMG time series w/ 1D GMM 
     my : (tsm1d) EEG time series w/ 1D GMM
+    h2d : (Histo2D)
     scores : (ScoreBlock)
     df : (pd.DataFrame)
     """
-
-    X = np.vstack((mx.x, my.x))
-
-    # make our h2d (do this elsewhere?)
-    xedg = np.linspace(-2.5, 2.5, 61)
-    yedg = np.linspace(-2.5, 2.5, 61)
-    hist, _ = np.histogramdd(X.T, bins=[xedg, yedg])
-    xcol = mx.metaData.get('channel', 'xx')
-    ycol = my.metaData.get('channel', 'xx')
-    h2d = rt.Histo2D(
-        dims=[xcol, ycol],
-        bin_edges=[xedg, yedg],
-        hist=hist,
-        varX=1,
-        varY=1,
-        ).normalize().logscale()
 
     pmin = scores.df_index['pmin'].values[-1]
 
@@ -338,6 +398,26 @@ class AutoScorer(object):
             self.dest = '%s-%s' % (self.dest, self.tag)
         os.makedirs(self.dest, exist_ok=True)
 
+    def h2d(self):
+        """make a Histo2D for the EMG/EEG features
+
+        bin counts are normalized and log-scaled
+        """
+        X = np.vstack((self.mx.x, self.my.x))
+        xedg = np.linspace(-2.5, 2.5, 61)
+        yedg = np.linspace(-2.5, 2.5, 61)
+        hist, _ = np.histogramdd(X.T, bins=[xedg, yedg])
+        xcol = self.mx.metaData.get('channel', 'xx')
+        ycol = self.my.metaData.get('channel', 'xx')
+        h = rt.Histo2D(
+            dims=[xcol, ycol],
+            bin_edges=[xedg, yedg],
+            hist=hist,
+            varX=1,
+            varY=1,
+            ).normalize().logscale()
+        return h
+
     def about(self):
         """"""
         print('-------- AutoScorer.about() --------')
@@ -428,7 +508,7 @@ class AutoScorer(object):
         df_plt = df[df['feature'] == 'consensus'][cols]
 
         # plot
-        fig, ax_top, ax_bot = plot_exsum(self.mx, self.my, scores=self.scores_pred, df=df_plt)
+        fig, ax_top, ax_bot = plot_exsum(self.mx, self.my, h2d=self.h2d(), scores=self.scores_pred, df=df_plt)
         fig.suptitle('trial %s, day %i' % (self.trial, self.day), fontsize=20)
         if save:
             plt.savefig(os.path.join(self.dest, 'plotx-%s.png' % self.tag), dpi=300)
