@@ -140,12 +140,16 @@ def plot_qp_vs_human_scores(autoscorer=None, scoreblock=None):
     mx = autoscorer.mx
     my = autoscorer.my
     labels_hum = ['Non REM', 'REM', 'Wake', 'XXX']      # one panel per label
-    labels_cnf = ['Non REM', 'REM', 'Wake', 'XXX', 'NOTSURE']
+    labels_cnf = ['Non REM', 'REM', 'Wake', 'XXX'] #, 'NOTSURE']
 
+    map_hum = {'Non REM X':'XXX'}
+    map_mdl = {'Non-REM':'Non REM', 'NOTSURE':'XXX'}
+    # dict_hum = dict()
 
     # human and model score vectors (w/ some tidying)
-    sc_hum = scoreblock.applymap({'Non REM X':'Non REM'}).data.ravel()
-    sc_mdl = autoscorer.scores_pred.applymap({'Non-REM':'Non REM'}).data[-1]
+    # sc_hum = scoreblock.applymap({'Non REM X':'Non REM'}).data.ravel()
+    sc_hum = scoreblock.applymap(map_hum).data.ravel()
+    sc_mdl = autoscorer.scores_pred.applymap(map_mdl).data[-1]
 
     # build dataframe with xy features and (human) consensus scores
     xys = np.vstack((mx.x, my.x, scoreblock.data.ravel())).T
@@ -160,6 +164,8 @@ def plot_qp_vs_human_scores(autoscorer=None, scoreblock=None):
     plt_hist_kwa = dict(cmap='bone', levels='auto', ptype='imshow')
     pt.plot_2D_hist(h2d=h2d, ax=ax[0], **plt_hist_kwa, cbar=False)
     plot_gmm_overlay(autoscorer.mx, autoscorer.my, ax=ax[0], pmin=autoscorer.pmin)
+    plt_info_text_block(mx=autoscorer.mx, my=autoscorer.my, ax=ax[0], txt_kwa=dict(fontsize=7, color='white'))
+
 
     xlim = ax[0].get_xlim()
     ylim = ax[0].get_ylim()
@@ -175,6 +181,10 @@ def plot_qp_vs_human_scores(autoscorer=None, scoreblock=None):
         axi.text(0.02, 0.98, label, ha='left', va='top', transform=axi.transAxes, **text_kwa)
         axi.text(0.98, 0.98, ntag, ha='right', va='top', transform=axi.transAxes, **text_kwa)
         plot_gmm_overlay(autoscorer.mx, autoscorer.my, ax=axi, pmin=autoscorer.pmin)
+        if i == 0:
+            plt_info_text_block(mx=autoscorer.mx, my=autoscorer.my, ax=axi, 
+                        txt_kwa=dict(fontsize=7, color='black'))
+
 
         axi.set_xlim(xlim)
         axi.set_ylim(ylim)
@@ -240,15 +250,47 @@ def plot_ts_chunk(mx=None, my=None, ax=None, n=0, N=0, scores=None):
 
 def plot_gmm_overlay(mx, my, ax=None, pmin=0.95, zorder=3):
     """plot GMM crossover bands and the Non-REM + Wake peaks"""
-    gmm2x_db = mx.gmm2.xinterval(pmin=pmin)
-    gmm2y_db = my.gmm2.xinterval(pmin=pmin)
-    ax.axvspan(*gmm2x_db, color='r', alpha=0.2, zorder=zorder)
-    ax.axhspan(*gmm2y_db, color='r', alpha=0.2, zorder=zorder)
+    xint = mx.gmm2.xinterval(pmin=pmin)
+    yint = my.gmm2.xinterval(pmin=pmin)
+
+    ax.text(0.5, 0.99, 'pmin='+str(pmin), ha='center', va='top', transform=ax.transAxes, color='r')
+
+    ax.axvspan(*xint, color='r', alpha=0.2, zorder=zorder)
+    ax.axhspan(*yint, color='r', alpha=0.2, zorder=zorder)
+    ax.axvline(xint[0], color='r', alpha=0.5, zorder=zorder)
+    ax.axvline(xint[1], color='r', alpha=0.5, zorder=zorder)
+    ax.axhline(yint[0], color='r', alpha=0.5, zorder=zorder)
+    ax.axhline(yint[1], color='r', alpha=0.5, zorder=zorder)
+
     ax.plot(mx.gmm2.x0, my.gmm2.x1, 'x', color='k', ms=16, mew=4, zorder=zorder)
     ax.plot(mx.gmm2.x1, my.gmm2.x0, 'x', color='k', ms=16, mew=4, zorder=zorder)
     ax.plot(mx.gmm2.x0, my.gmm2.x1, 'x', color='grey', ms=15, mew=2, zorder=zorder)
     ax.plot(mx.gmm2.x1, my.gmm2.x0, 'x', color='grey', ms=15, mew=2, zorder=zorder)
 
+def plt_info_text_block(mx=None, my=None, ax=None, txt_kwa=None):
+    """plot metadata info text block in lower left corner"""
+    if txt_kwa is None: txt_kwa = {}
+    txt_kwa_def = dict(
+        fontsize=5,
+        color='black',
+        fontfamily='monospace',
+        )
+    txt_kwa_def.update(txt_kwa)
+
+    t_spam = []
+    t_spam.append('f [Hz] : %s \n' % (str(mx.metaData.get('freq',-1))))
+    t_spam.append('epc [s]: %-3.0f \n' % (mx.metaData.get('epochLength', -1)))
+    for m in [mx, my]:
+        # bandpass = m.metaData.get('bandpass', dict(lowcut=-1, highcut=-1))
+        lowcut = m.metaData.get('lowcut', -1)
+        highcut = m.metaData.get('highcut', -1)
+
+        t_spam.append('channel: %-5s \n' % (m.metaData.get('channel', 'xx')))
+        t_spam.append('  median fw [s]: %-3.0f \n' % (m.metaData.get('medianFilterWidth', -1)))
+        t_spam.append('  bandpass [Hz]: (%-3.0f, %-3.0f)  \n' % (lowcut, highcut))
+    txt = ''.join(t_spam)
+    # tx3 = ax.text(xlim[0]+0.1, ylim[0], txt, ha='left', va='bottom', ma='left', **txt_kwa_def)
+    tx3 = ax.text(0.02, 0, txt, transform=ax.transAxes, ha='left', va='bottom', ma='left', **txt_kwa_def)
 
 def plot2d(mx=None, my=None, ax=None, pmin=0.95):
     """scatter plot of EMG/EEG rms power    
@@ -281,19 +323,8 @@ def plot2d(mx=None, my=None, ax=None, pmin=0.95):
     ax.spines['right'].set_color('grey')
 
     # metadata info block
-    t_spam = []
-    t_spam.append('f [Hz] : %s \n' % (str(mx.metaData.get('freq',-1))))
-    for m in [mx, my]:
-        # bandpass = m.metaData.get('bandpass', dict(lowcut=-1, highcut=-1))
-        lowcut = m.metaData.get('lowcut', -1)
-        highcut = m.metaData.get('highcut', -1)
 
-        t_spam.append('channel: %-5s \n' % (m.metaData.get('channel', 'xx')))
-        t_spam.append('  epoch len [s]: %-3.0f \n' % (m.metaData.get('epochLength', -1)))
-        t_spam.append('  median fw [s]: %-3.0f \n' % (m.metaData.get('medianFilterWidth', -1)))
-        t_spam.append('  bandpass [Hz]: (%-3.0f, %-3.0f)  \n' % (lowcut, highcut))
-    txt = ''.join(t_spam)
-    tx3 = ax.text(xlim[0]+0.1, ylim[0], txt, ha='left', va='bottom', ma='left', fontsize=txt_fontsize, fontfamily='monospace')
+    plt_info_text_block(mx=mx, my=my, ax=ax)
 
 
 def plot_exsum(mx, my, h2d=None, scores=None, df=None):
@@ -330,9 +361,9 @@ def plot_exsum(mx, my, h2d=None, scores=None, df=None):
     # BOTTOM HALF: joint distribution, etc..
     # joint distribution scatter
     plot2d(mx=mx, my=my, ax=ax_bot[0], pmin=pmin )
-    ax_bot[0].plot(mx.x[ndx_u], my.x[ndx_u], 'ro', ms=1, lw=0)
-    ax_bot[0].plot(mx.x[ndx_n], my.x[ndx_n], 'bo', ms=1, lw=0)
-    ax_bot[0].plot(mx.x[ndx_w], my.x[ndx_w], 'go', ms=1, lw=0)
+    ax_bot[0].plot(mx.x[ndx_u], my.x[ndx_u], 'ro', ms=0.4, lw=0)
+    ax_bot[0].plot(mx.x[ndx_n], my.x[ndx_n], 'bo', ms=0.4, lw=0)
+    ax_bot[0].plot(mx.x[ndx_w], my.x[ndx_w], 'go', ms=0.4, lw=0)
     plot_gmm_overlay(mx=mx, my=my, ax=ax_bot[0], pmin=pmin)
 
     # joint distribution histogram
@@ -482,7 +513,7 @@ class AutoScorer(object):
         self.scores_frac.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_score_fractions.json'))
 
         self.scores_pred.to_sirenia_txt(
-            str2num={'Wake':0, 'Non-REM':1, 'NOTSURE':2},
+            str2num={'Wake':1, 'Non-REM':2, 'NOTSURE':100},
             f=os.path.join(os.path.join(self.dest, 'scores-qp-sirenia.txt')),
             row=2,
             )

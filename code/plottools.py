@@ -56,7 +56,6 @@ def plot_confusion_matrix(ax=None,
     else:
         pass
         #print('plotting confusion matrix, without normalization')
-
     #print(cm)
 
     if ax is None:
@@ -74,8 +73,11 @@ def plot_confusion_matrix(ax=None,
            xlabel='Predicted label')
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
+    # plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    plt.setp(ax.get_yticklabels(), rotation=90, va="center", fontsize=10)
+    plt.setp(ax.get_xticklabels(), rotation=0, fontsize=10)
+
 
     # Loop over data dimensions and create text annotations.
     #fmt = '.2f' if normalize else 'd'
