@@ -1,6 +1,6 @@
 # sleep-classifier
 
-This repo implements a scheme to assign sleep states for mice undergoing simultaneous EEG and EMG recording. An unsupervised classifier uses two features, EMG and EEG rms power, to make conservative predictions of Non REM and Wake epochs, and defers the more challenging epochs, including REM, to manual scoring.
+This repo implements a scheme to assign sleep states for mice undergoing simultaneous EEG and EMG recording. An unsupervised classifier uses two features, EMG and EEG rms power, to make conservative predictions of Non REM and Wake epochs, and defers the more challenging epochs, including REM, to manual scoring. The results of this analysis are summarized in a figure like the one shown here.
 
 <img src="./aux/plotx-trial-335-day-1.png" alt="drawing" width="900">
 
@@ -13,6 +13,7 @@ git clone git@github.com:focolab/sleep-classifier.git
 cd sleep-classifier     # enter the folder
 pip install -e .       # -e allows you to edit (hack arond with) the library
 ```
+Because of their filesizes, some raw data files (edfs) are not included in the example_data folder, and need to be copied there by hand.
 
 # demo
 The jupyter notebook in the demo folder is the best place to get started.
