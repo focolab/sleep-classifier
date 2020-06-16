@@ -364,12 +364,12 @@ class ScoreBlock(object):
         return cc
 
 
-    def to_sirenia_txt(self, f='scores.txt', row=0, str2num=None):
+    def to_sirenia_txt(self, f='scores.txt', row=0, str2num=None, start=None):
         """dump a row of scores to Sirenia formatted csv (.txt)"""
-        df = self.to_sirenia_df(row=row, str2num=str2num)
+        df = self.to_sirenia_df(row=row, str2num=str2num, start=start)
         df.to_csv(f)
 
-    def to_sirenia_df(self, row=0, str2num=None):
+    def to_sirenia_df(self, row=0, str2num=None, start=None):
         """convert a row of scores to Sirenia formatted DataFrame
 
         Epoch #,Start Time,End Time,Score #, Score
@@ -383,8 +383,12 @@ class ScoreBlock(object):
         num2str = {v:k for k,v in str2num.items()}
 
         from datetime import datetime, timedelta
-        startdate = "2019-01-02"
-        starttime = "09:00:00"
+        if start is not None:
+            [startdate, starttime] = start
+        else:
+            startdate = "2019-01-02"
+            starttime = "09:00:00"
+
         epoch_len = 10
         scores = self.data[row]
         num_epochs = len(scores)
@@ -393,8 +397,8 @@ class ScoreBlock(object):
         dt = datetime.fromisoformat('%sT%s' % (startdate, starttime))
         epoch_indices = range(1,len(scores)+1)
         times = [dt + timedelta(seconds=epoch_len*i) for i in range(num_epochs+1)]
-        ta = [xx.strftime('%d/%m/%Y %X') for xx in times[:-1]]
-        tb = [xx.strftime('%d/%m/%Y %X') for xx in times[1:]]
+        ta = [xx.strftime('%m/%d/%Y %X') for xx in times[:-1]]
+        tb = [xx.strftime('%m/%d/%Y %X') for xx in times[1:]]
 
         # we need scores in string and number (integer) format
         if isinstance(scores[0], str):

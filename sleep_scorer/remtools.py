@@ -805,9 +805,9 @@ class EDFData(object):
         samples_per_epoch = num_samples/num_epochs
         freq = num_samples/duration
 
-        
+
         startdate = "%4i-%2.2i-%2.2i" % (f.getStartdatetime().year,f.getStartdatetime().month,f.getStartdatetime().day)
-        starttime = "%i:%02i:%02i" % (f.getStartdatetime().hour,f.getStartdatetime().minute,f.getStartdatetime().second)
+        starttime = "%02i:%02i:%02i" % (f.getStartdatetime().hour,f.getStartdatetime().minute,f.getStartdatetime().second)
         print('-----------------------------------------------------------------------')
         print('file               :', edf)
         print('trial              :', trial)

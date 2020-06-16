@@ -512,10 +512,16 @@ class AutoScorer(object):
         self.scores_pred.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_scores.json'))
         self.scores_frac.to_json(f=os.path.join(self.dest, 'scoreblock_predicted_score_fractions.json'))
 
-        self.scores_pred.to_sirenia_txt(
-            str2num={'Wake':1, 'Non-REM':2, 'NOTSURE':100},
+
+        # dig out the start date and time from the edf
+        dt = [self.std.edf.startdate, self.std.edf.starttime]
+        # sirenia output
+        sirenia_scoreblock = self.scores_pred.applymap({'NOTSURE':'Unscored'})
+        sirenia_scoreblock.to_sirenia_txt(
+            str2num={'Wake':1, 'Non-REM':2, 'Unscored':255},
             f=os.path.join(os.path.join(self.dest, 'scores-qp-sirenia.txt')),
-            row=2,
+            row=2,  # (take the bottom row of scores)
+            start=dt
             )
 
 
