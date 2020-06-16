@@ -8,17 +8,19 @@
 #       - smooth, normalize, bandpass, stride
 #
 #   rmspow:
+#       - bandpass filter and compute block averaged rms power
 #       - avoids DFT, numerically safer for short epochs
-#       - bandpass and compute block averaged rms power
-#       - power is log scaled then standardized (zero mean, unit variance)
+#       - rms power is log scaled then standardized (zero mean, unit variance)
 #
 
 import pdb
 
 import pandas as pd
 import numpy as np
+from scipy import signal
 
-import scoreblock as sb
+import sleep_scorer.scoreblock as sb
+from sleep_scorer import tsm1d
 
 
 def Featurizer(object):
@@ -132,8 +134,6 @@ def compute_rmspow_features(edfd=None, params=None):
     scoreblock
     """
 
-    import tsm1d
-    from scipy import signal
 
     if params is None:
         params = make_rmspower_params()['rmspower']

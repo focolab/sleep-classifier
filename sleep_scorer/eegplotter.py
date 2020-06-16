@@ -16,8 +16,8 @@ matplotlib.use("tkAgg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import plottools as pt
-import remtools as rt
+import sleep_scorer.plottools as pt
+import sleep_scorer.remtools as rt
 
 
 

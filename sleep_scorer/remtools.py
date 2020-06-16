@@ -39,7 +39,7 @@ import seaborn as sns
 
 import pyedflib
 
-import scoreblock as sb
+import sleep_scorer.scoreblock as sb
 
 
 class StagedTrialData(object):

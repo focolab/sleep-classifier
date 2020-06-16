@@ -9,7 +9,7 @@ import os
 
 import pandas as pd
 import numpy as np
-import scoreblock as sb
+import sleep_scorer.scoreblock as sb
 
 class SireniaScoreLoader(object):
     """load and consolidate sirenia score files (txt) into scoreblocks"""

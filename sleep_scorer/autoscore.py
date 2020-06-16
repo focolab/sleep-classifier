@@ -18,10 +18,10 @@ import seaborn as sns
 import sklearn
 from sklearn.metrics import confusion_matrix
 
-import plottools as pt
-import remtools as rt
-import featurize as fz
-import tsm1d
+import sleep_scorer.plottools as pt
+import sleep_scorer.remtools as rt
+import sleep_scorer.featurize as fz
+import sleep_scorer.tsm1d as tsm1d
 
 sns.set(color_codes=True)
 sns.set_style('ticks')

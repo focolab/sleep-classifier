@@ -5,8 +5,10 @@ import os
 import pandas as pd
 import numpy as np
 from scipy import signal
+from sklearn import mixture
+import matplotlib.pyplot as plt
 
-import scoreblock as sb
+import sleep_scorer.scoreblock as sb
 
 
 class TimeSeriesModel1D(object):
@@ -22,7 +24,6 @@ class TimeSeriesModel1D(object):
         x (array) : data values
         metaData (dict) : things like trial, day, etc
         """
-        from sklearn import mixture
 
         # make a Gaussian Mixture Model (sklearn version)
         clf = mixture.GaussianMixture(n_components=2).fit(x.reshape(-1,1))
@@ -116,7 +117,6 @@ class TwoStateGMMClassifier(object):
 
     @classmethod
     def from_data(cls, x):
-        from sklearn import mixture
         clf = mixture.GaussianMixture(n_components=2).fit(x.reshape(-1,1))
         return cls(clf=clf)
 
@@ -268,7 +268,6 @@ def test_full():
     - built tsm1d
     - score preditions
     """
-    import matplotlib.pyplot as plt
     os.makedirs('scratch', exist_ok=True)
     np.random.seed(seed=123)
 
